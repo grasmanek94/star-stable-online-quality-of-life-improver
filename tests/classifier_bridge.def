@@ -1,0 +1,7 @@
+EXPORTS
+ TestConfig
+ SSO5_actor
+ SSO5_visual
+ SSO5_flag
+ SSO5_sizeof_config
+ SSO5_offset_hits

@@ -1,0 +1,1478 @@
+{
+  "source": "Windows System32 opengl32.dll",
+  "sha256": "3049c75a038a5115e3500bfe6a45e5e3935e95549e171dfb83182061fc81467c",
+  "exports": [
+    {
+      "name": "GlmfBeginGlsBlock",
+      "ordinal": 1
+    },
+    {
+      "name": "GlmfCloseMetaFile",
+      "ordinal": 2
+    },
+    {
+      "name": "GlmfEndGlsBlock",
+      "ordinal": 3
+    },
+    {
+      "name": "GlmfEndPlayback",
+      "ordinal": 4
+    },
+    {
+      "name": "GlmfInitPlayback",
+      "ordinal": 5
+    },
+    {
+      "name": "GlmfPlayGlsRecord",
+      "ordinal": 6
+    },
+    {
+      "name": "glAccum",
+      "ordinal": 7
+    },
+    {
+      "name": "glAlphaFunc",
+      "ordinal": 8
+    },
+    {
+      "name": "glAreTexturesResident",
+      "ordinal": 9
+    },
+    {
+      "name": "glArrayElement",
+      "ordinal": 10
+    },
+    {
+      "name": "glBegin",
+      "ordinal": 11
+    },
+    {
+      "name": "glBindTexture",
+      "ordinal": 12
+    },
+    {
+      "name": "glBitmap",
+      "ordinal": 13
+    },
+    {
+      "name": "glBlendFunc",
+      "ordinal": 14
+    },
+    {
+      "name": "glCallList",
+      "ordinal": 15
+    },
+    {
+      "name": "glCallLists",
+      "ordinal": 16
+    },
+    {
+      "name": "glClear",
+      "ordinal": 17
+    },
+    {
+      "name": "glClearAccum",
+      "ordinal": 18
+    },
+    {
+      "name": "glClearColor",
+      "ordinal": 19
+    },
+    {
+      "name": "glClearDepth",
+      "ordinal": 20
+    },
+    {
+      "name": "glClearIndex",
+      "ordinal": 21
+    },
+    {
+      "name": "glClearStencil",
+      "ordinal": 22
+    },
+    {
+      "name": "glClipPlane",
+      "ordinal": 23
+    },
+    {
+      "name": "glColor3b",
+      "ordinal": 24
+    },
+    {
+      "name": "glColor3bv",
+      "ordinal": 25
+    },
+    {
+      "name": "glColor3d",
+      "ordinal": 26
+    },
+    {
+      "name": "glColor3dv",
+      "ordinal": 27
+    },
+    {
+      "name": "glColor3f",
+      "ordinal": 28
+    },
+    {
+      "name": "glColor3fv",
+      "ordinal": 29
+    },
+    {
+      "name": "glColor3i",
+      "ordinal": 30
+    },
+    {
+      "name": "glColor3iv",
+      "ordinal": 31
+    },
+    {
+      "name": "glColor3s",
+      "ordinal": 32
+    },
+    {
+      "name": "glColor3sv",
+      "ordinal": 33
+    },
+    {
+      "name": "glColor3ub",
+      "ordinal": 34
+    },
+    {
+      "name": "glColor3ubv",
+      "ordinal": 35
+    },
+    {
+      "name": "glColor3ui",
+      "ordinal": 36
+    },
+    {
+      "name": "glColor3uiv",
+      "ordinal": 37
+    },
+    {
+      "name": "glColor3us",
+      "ordinal": 38
+    },
+    {
+      "name": "glColor3usv",
+      "ordinal": 39
+    },
+    {
+      "name": "glColor4b",
+      "ordinal": 40
+    },
+    {
+      "name": "glColor4bv",
+      "ordinal": 41
+    },
+    {
+      "name": "glColor4d",
+      "ordinal": 42
+    },
+    {
+      "name": "glColor4dv",
+      "ordinal": 43
+    },
+    {
+      "name": "glColor4f",
+      "ordinal": 44
+    },
+    {
+      "name": "glColor4fv",
+      "ordinal": 45
+    },
+    {
+      "name": "glColor4i",
+      "ordinal": 46
+    },
+    {
+      "name": "glColor4iv",
+      "ordinal": 47
+    },
+    {
+      "name": "glColor4s",
+      "ordinal": 48
+    },
+    {
+      "name": "glColor4sv",
+      "ordinal": 49
+    },
+    {
+      "name": "glColor4ub",
+      "ordinal": 50
+    },
+    {
+      "name": "glColor4ubv",
+      "ordinal": 51
+    },
+    {
+      "name": "glColor4ui",
+      "ordinal": 52
+    },
+    {
+      "name": "glColor4uiv",
+      "ordinal": 53
+    },
+    {
+      "name": "glColor4us",
+      "ordinal": 54
+    },
+    {
+      "name": "glColor4usv",
+      "ordinal": 55
+    },
+    {
+      "name": "glColorMask",
+      "ordinal": 56
+    },
+    {
+      "name": "glColorMaterial",
+      "ordinal": 57
+    },
+    {
+      "name": "glColorPointer",
+      "ordinal": 58
+    },
+    {
+      "name": "glCopyPixels",
+      "ordinal": 59
+    },
+    {
+      "name": "glCopyTexImage1D",
+      "ordinal": 60
+    },
+    {
+      "name": "glCopyTexImage2D",
+      "ordinal": 61
+    },
+    {
+      "name": "glCopyTexSubImage1D",
+      "ordinal": 62
+    },
+    {
+      "name": "glCopyTexSubImage2D",
+      "ordinal": 63
+    },
+    {
+      "name": "glCullFace",
+      "ordinal": 64
+    },
+    {
+      "name": "glDebugEntry",
+      "ordinal": 65
+    },
+    {
+      "name": "glDeleteLists",
+      "ordinal": 66
+    },
+    {
+      "name": "glDeleteTextures",
+      "ordinal": 67
+    },
+    {
+      "name": "glDepthFunc",
+      "ordinal": 68
+    },
+    {
+      "name": "glDepthMask",
+      "ordinal": 69
+    },
+    {
+      "name": "glDepthRange",
+      "ordinal": 70
+    },
+    {
+      "name": "glDisable",
+      "ordinal": 71
+    },
+    {
+      "name": "glDisableClientState",
+      "ordinal": 72
+    },
+    {
+      "name": "glDrawArrays",
+      "ordinal": 73
+    },
+    {
+      "name": "glDrawBuffer",
+      "ordinal": 74
+    },
+    {
+      "name": "glDrawElements",
+      "ordinal": 75
+    },
+    {
+      "name": "glDrawPixels",
+      "ordinal": 76
+    },
+    {
+      "name": "glEdgeFlag",
+      "ordinal": 77
+    },
+    {
+      "name": "glEdgeFlagPointer",
+      "ordinal": 78
+    },
+    {
+      "name": "glEdgeFlagv",
+      "ordinal": 79
+    },
+    {
+      "name": "glEnable",
+      "ordinal": 80
+    },
+    {
+      "name": "glEnableClientState",
+      "ordinal": 81
+    },
+    {
+      "name": "glEnd",
+      "ordinal": 82
+    },
+    {
+      "name": "glEndList",
+      "ordinal": 83
+    },
+    {
+      "name": "glEvalCoord1d",
+      "ordinal": 84
+    },
+    {
+      "name": "glEvalCoord1dv",
+      "ordinal": 85
+    },
+    {
+      "name": "glEvalCoord1f",
+      "ordinal": 86
+    },
+    {
+      "name": "glEvalCoord1fv",
+      "ordinal": 87
+    },
+    {
+      "name": "glEvalCoord2d",
+      "ordinal": 88
+    },
+    {
+      "name": "glEvalCoord2dv",
+      "ordinal": 89
+    },
+    {
+      "name": "glEvalCoord2f",
+      "ordinal": 90
+    },
+    {
+      "name": "glEvalCoord2fv",
+      "ordinal": 91
+    },
+    {
+      "name": "glEvalMesh1",
+      "ordinal": 92
+    },
+    {
+      "name": "glEvalMesh2",
+      "ordinal": 93
+    },
+    {
+      "name": "glEvalPoint1",
+      "ordinal": 94
+    },
+    {
+      "name": "glEvalPoint2",
+      "ordinal": 95
+    },
+    {
+      "name": "glFeedbackBuffer",
+      "ordinal": 96
+    },
+    {
+      "name": "glFinish",
+      "ordinal": 97
+    },
+    {
+      "name": "glFlush",
+      "ordinal": 98
+    },
+    {
+      "name": "glFogf",
+      "ordinal": 99
+    },
+    {
+      "name": "glFogfv",
+      "ordinal": 100
+    },
+    {
+      "name": "glFogi",
+      "ordinal": 101
+    },
+    {
+      "name": "glFogiv",
+      "ordinal": 102
+    },
+    {
+      "name": "glFrontFace",
+      "ordinal": 103
+    },
+    {
+      "name": "glFrustum",
+      "ordinal": 104
+    },
+    {
+      "name": "glGenLists",
+      "ordinal": 105
+    },
+    {
+      "name": "glGenTextures",
+      "ordinal": 106
+    },
+    {
+      "name": "glGetBooleanv",
+      "ordinal": 107
+    },
+    {
+      "name": "glGetClipPlane",
+      "ordinal": 108
+    },
+    {
+      "name": "glGetDoublev",
+      "ordinal": 109
+    },
+    {
+      "name": "glGetError",
+      "ordinal": 110
+    },
+    {
+      "name": "glGetFloatv",
+      "ordinal": 111
+    },
+    {
+      "name": "glGetIntegerv",
+      "ordinal": 112
+    },
+    {
+      "name": "glGetLightfv",
+      "ordinal": 113
+    },
+    {
+      "name": "glGetLightiv",
+      "ordinal": 114
+    },
+    {
+      "name": "glGetMapdv",
+      "ordinal": 115
+    },
+    {
+      "name": "glGetMapfv",
+      "ordinal": 116
+    },
+    {
+      "name": "glGetMapiv",
+      "ordinal": 117
+    },
+    {
+      "name": "glGetMaterialfv",
+      "ordinal": 118
+    },
+    {
+      "name": "glGetMaterialiv",
+      "ordinal": 119
+    },
+    {
+      "name": "glGetPixelMapfv",
+      "ordinal": 120
+    },
+    {
+      "name": "glGetPixelMapuiv",
+      "ordinal": 121
+    },
+    {
+      "name": "glGetPixelMapusv",
+      "ordinal": 122
+    },
+    {
+      "name": "glGetPointerv",
+      "ordinal": 123
+    },
+    {
+      "name": "glGetPolygonStipple",
+      "ordinal": 124
+    },
+    {
+      "name": "glGetString",
+      "ordinal": 125
+    },
+    {
+      "name": "glGetTexEnvfv",
+      "ordinal": 126
+    },
+    {
+      "name": "glGetTexEnviv",
+      "ordinal": 127
+    },
+    {
+      "name": "glGetTexGendv",
+      "ordinal": 128
+    },
+    {
+      "name": "glGetTexGenfv",
+      "ordinal": 129
+    },
+    {
+      "name": "glGetTexGeniv",
+      "ordinal": 130
+    },
+    {
+      "name": "glGetTexImage",
+      "ordinal": 131
+    },
+    {
+      "name": "glGetTexLevelParameterfv",
+      "ordinal": 132
+    },
+    {
+      "name": "glGetTexLevelParameteriv",
+      "ordinal": 133
+    },
+    {
+      "name": "glGetTexParameterfv",
+      "ordinal": 134
+    },
+    {
+      "name": "glGetTexParameteriv",
+      "ordinal": 135
+    },
+    {
+      "name": "glHint",
+      "ordinal": 136
+    },
+    {
+      "name": "glIndexMask",
+      "ordinal": 137
+    },
+    {
+      "name": "glIndexPointer",
+      "ordinal": 138
+    },
+    {
+      "name": "glIndexd",
+      "ordinal": 139
+    },
+    {
+      "name": "glIndexdv",
+      "ordinal": 140
+    },
+    {
+      "name": "glIndexf",
+      "ordinal": 141
+    },
+    {
+      "name": "glIndexfv",
+      "ordinal": 142
+    },
+    {
+      "name": "glIndexi",
+      "ordinal": 143
+    },
+    {
+      "name": "glIndexiv",
+      "ordinal": 144
+    },
+    {
+      "name": "glIndexs",
+      "ordinal": 145
+    },
+    {
+      "name": "glIndexsv",
+      "ordinal": 146
+    },
+    {
+      "name": "glIndexub",
+      "ordinal": 147
+    },
+    {
+      "name": "glIndexubv",
+      "ordinal": 148
+    },
+    {
+      "name": "glInitNames",
+      "ordinal": 149
+    },
+    {
+      "name": "glInterleavedArrays",
+      "ordinal": 150
+    },
+    {
+      "name": "glIsEnabled",
+      "ordinal": 151
+    },
+    {
+      "name": "glIsList",
+      "ordinal": 152
+    },
+    {
+      "name": "glIsTexture",
+      "ordinal": 153
+    },
+    {
+      "name": "glLightModelf",
+      "ordinal": 154
+    },
+    {
+      "name": "glLightModelfv",
+      "ordinal": 155
+    },
+    {
+      "name": "glLightModeli",
+      "ordinal": 156
+    },
+    {
+      "name": "glLightModeliv",
+      "ordinal": 157
+    },
+    {
+      "name": "glLightf",
+      "ordinal": 158
+    },
+    {
+      "name": "glLightfv",
+      "ordinal": 159
+    },
+    {
+      "name": "glLighti",
+      "ordinal": 160
+    },
+    {
+      "name": "glLightiv",
+      "ordinal": 161
+    },
+    {
+      "name": "glLineStipple",
+      "ordinal": 162
+    },
+    {
+      "name": "glLineWidth",
+      "ordinal": 163
+    },
+    {
+      "name": "glListBase",
+      "ordinal": 164
+    },
+    {
+      "name": "glLoadIdentity",
+      "ordinal": 165
+    },
+    {
+      "name": "glLoadMatrixd",
+      "ordinal": 166
+    },
+    {
+      "name": "glLoadMatrixf",
+      "ordinal": 167
+    },
+    {
+      "name": "glLoadName",
+      "ordinal": 168
+    },
+    {
+      "name": "glLogicOp",
+      "ordinal": 169
+    },
+    {
+      "name": "glMap1d",
+      "ordinal": 170
+    },
+    {
+      "name": "glMap1f",
+      "ordinal": 171
+    },
+    {
+      "name": "glMap2d",
+      "ordinal": 172
+    },
+    {
+      "name": "glMap2f",
+      "ordinal": 173
+    },
+    {
+      "name": "glMapGrid1d",
+      "ordinal": 174
+    },
+    {
+      "name": "glMapGrid1f",
+      "ordinal": 175
+    },
+    {
+      "name": "glMapGrid2d",
+      "ordinal": 176
+    },
+    {
+      "name": "glMapGrid2f",
+      "ordinal": 177
+    },
+    {
+      "name": "glMaterialf",
+      "ordinal": 178
+    },
+    {
+      "name": "glMaterialfv",
+      "ordinal": 179
+    },
+    {
+      "name": "glMateriali",
+      "ordinal": 180
+    },
+    {
+      "name": "glMaterialiv",
+      "ordinal": 181
+    },
+    {
+      "name": "glMatrixMode",
+      "ordinal": 182
+    },
+    {
+      "name": "glMultMatrixd",
+      "ordinal": 183
+    },
+    {
+      "name": "glMultMatrixf",
+      "ordinal": 184
+    },
+    {
+      "name": "glNewList",
+      "ordinal": 185
+    },
+    {
+      "name": "glNormal3b",
+      "ordinal": 186
+    },
+    {
+      "name": "glNormal3bv",
+      "ordinal": 187
+    },
+    {
+      "name": "glNormal3d",
+      "ordinal": 188
+    },
+    {
+      "name": "glNormal3dv",
+      "ordinal": 189
+    },
+    {
+      "name": "glNormal3f",
+      "ordinal": 190
+    },
+    {
+      "name": "glNormal3fv",
+      "ordinal": 191
+    },
+    {
+      "name": "glNormal3i",
+      "ordinal": 192
+    },
+    {
+      "name": "glNormal3iv",
+      "ordinal": 193
+    },
+    {
+      "name": "glNormal3s",
+      "ordinal": 194
+    },
+    {
+      "name": "glNormal3sv",
+      "ordinal": 195
+    },
+    {
+      "name": "glNormalPointer",
+      "ordinal": 196
+    },
+    {
+      "name": "glOrtho",
+      "ordinal": 197
+    },
+    {
+      "name": "glPassThrough",
+      "ordinal": 198
+    },
+    {
+      "name": "glPixelMapfv",
+      "ordinal": 199
+    },
+    {
+      "name": "glPixelMapuiv",
+      "ordinal": 200
+    },
+    {
+      "name": "glPixelMapusv",
+      "ordinal": 201
+    },
+    {
+      "name": "glPixelStoref",
+      "ordinal": 202
+    },
+    {
+      "name": "glPixelStorei",
+      "ordinal": 203
+    },
+    {
+      "name": "glPixelTransferf",
+      "ordinal": 204
+    },
+    {
+      "name": "glPixelTransferi",
+      "ordinal": 205
+    },
+    {
+      "name": "glPixelZoom",
+      "ordinal": 206
+    },
+    {
+      "name": "glPointSize",
+      "ordinal": 207
+    },
+    {
+      "name": "glPolygonMode",
+      "ordinal": 208
+    },
+    {
+      "name": "glPolygonOffset",
+      "ordinal": 209
+    },
+    {
+      "name": "glPolygonStipple",
+      "ordinal": 210
+    },
+    {
+      "name": "glPopAttrib",
+      "ordinal": 211
+    },
+    {
+      "name": "glPopClientAttrib",
+      "ordinal": 212
+    },
+    {
+      "name": "glPopMatrix",
+      "ordinal": 213
+    },
+    {
+      "name": "glPopName",
+      "ordinal": 214
+    },
+    {
+      "name": "glPrioritizeTextures",
+      "ordinal": 215
+    },
+    {
+      "name": "glPushAttrib",
+      "ordinal": 216
+    },
+    {
+      "name": "glPushClientAttrib",
+      "ordinal": 217
+    },
+    {
+      "name": "glPushMatrix",
+      "ordinal": 218
+    },
+    {
+      "name": "glPushName",
+      "ordinal": 219
+    },
+    {
+      "name": "glRasterPos2d",
+      "ordinal": 220
+    },
+    {
+      "name": "glRasterPos2dv",
+      "ordinal": 221
+    },
+    {
+      "name": "glRasterPos2f",
+      "ordinal": 222
+    },
+    {
+      "name": "glRasterPos2fv",
+      "ordinal": 223
+    },
+    {
+      "name": "glRasterPos2i",
+      "ordinal": 224
+    },
+    {
+      "name": "glRasterPos2iv",
+      "ordinal": 225
+    },
+    {
+      "name": "glRasterPos2s",
+      "ordinal": 226
+    },
+    {
+      "name": "glRasterPos2sv",
+      "ordinal": 227
+    },
+    {
+      "name": "glRasterPos3d",
+      "ordinal": 228
+    },
+    {
+      "name": "glRasterPos3dv",
+      "ordinal": 229
+    },
+    {
+      "name": "glRasterPos3f",
+      "ordinal": 230
+    },
+    {
+      "name": "glRasterPos3fv",
+      "ordinal": 231
+    },
+    {
+      "name": "glRasterPos3i",
+      "ordinal": 232
+    },
+    {
+      "name": "glRasterPos3iv",
+      "ordinal": 233
+    },
+    {
+      "name": "glRasterPos3s",
+      "ordinal": 234
+    },
+    {
+      "name": "glRasterPos3sv",
+      "ordinal": 235
+    },
+    {
+      "name": "glRasterPos4d",
+      "ordinal": 236
+    },
+    {
+      "name": "glRasterPos4dv",
+      "ordinal": 237
+    },
+    {
+      "name": "glRasterPos4f",
+      "ordinal": 238
+    },
+    {
+      "name": "glRasterPos4fv",
+      "ordinal": 239
+    },
+    {
+      "name": "glRasterPos4i",
+      "ordinal": 240
+    },
+    {
+      "name": "glRasterPos4iv",
+      "ordinal": 241
+    },
+    {
+      "name": "glRasterPos4s",
+      "ordinal": 242
+    },
+    {
+      "name": "glRasterPos4sv",
+      "ordinal": 243
+    },
+    {
+      "name": "glReadBuffer",
+      "ordinal": 244
+    },
+    {
+      "name": "glReadPixels",
+      "ordinal": 245
+    },
+    {
+      "name": "glRectd",
+      "ordinal": 246
+    },
+    {
+      "name": "glRectdv",
+      "ordinal": 247
+    },
+    {
+      "name": "glRectf",
+      "ordinal": 248
+    },
+    {
+      "name": "glRectfv",
+      "ordinal": 249
+    },
+    {
+      "name": "glRecti",
+      "ordinal": 250
+    },
+    {
+      "name": "glRectiv",
+      "ordinal": 251
+    },
+    {
+      "name": "glRects",
+      "ordinal": 252
+    },
+    {
+      "name": "glRectsv",
+      "ordinal": 253
+    },
+    {
+      "name": "glRenderMode",
+      "ordinal": 254
+    },
+    {
+      "name": "glRotated",
+      "ordinal": 255
+    },
+    {
+      "name": "glRotatef",
+      "ordinal": 256
+    },
+    {
+      "name": "glScaled",
+      "ordinal": 257
+    },
+    {
+      "name": "glScalef",
+      "ordinal": 258
+    },
+    {
+      "name": "glScissor",
+      "ordinal": 259
+    },
+    {
+      "name": "glSelectBuffer",
+      "ordinal": 260
+    },
+    {
+      "name": "glShadeModel",
+      "ordinal": 261
+    },
+    {
+      "name": "glStencilFunc",
+      "ordinal": 262
+    },
+    {
+      "name": "glStencilMask",
+      "ordinal": 263
+    },
+    {
+      "name": "glStencilOp",
+      "ordinal": 264
+    },
+    {
+      "name": "glTexCoord1d",
+      "ordinal": 265
+    },
+    {
+      "name": "glTexCoord1dv",
+      "ordinal": 266
+    },
+    {
+      "name": "glTexCoord1f",
+      "ordinal": 267
+    },
+    {
+      "name": "glTexCoord1fv",
+      "ordinal": 268
+    },
+    {
+      "name": "glTexCoord1i",
+      "ordinal": 269
+    },
+    {
+      "name": "glTexCoord1iv",
+      "ordinal": 270
+    },
+    {
+      "name": "glTexCoord1s",
+      "ordinal": 271
+    },
+    {
+      "name": "glTexCoord1sv",
+      "ordinal": 272
+    },
+    {
+      "name": "glTexCoord2d",
+      "ordinal": 273
+    },
+    {
+      "name": "glTexCoord2dv",
+      "ordinal": 274
+    },
+    {
+      "name": "glTexCoord2f",
+      "ordinal": 275
+    },
+    {
+      "name": "glTexCoord2fv",
+      "ordinal": 276
+    },
+    {
+      "name": "glTexCoord2i",
+      "ordinal": 277
+    },
+    {
+      "name": "glTexCoord2iv",
+      "ordinal": 278
+    },
+    {
+      "name": "glTexCoord2s",
+      "ordinal": 279
+    },
+    {
+      "name": "glTexCoord2sv",
+      "ordinal": 280
+    },
+    {
+      "name": "glTexCoord3d",
+      "ordinal": 281
+    },
+    {
+      "name": "glTexCoord3dv",
+      "ordinal": 282
+    },
+    {
+      "name": "glTexCoord3f",
+      "ordinal": 283
+    },
+    {
+      "name": "glTexCoord3fv",
+      "ordinal": 284
+    },
+    {
+      "name": "glTexCoord3i",
+      "ordinal": 285
+    },
+    {
+      "name": "glTexCoord3iv",
+      "ordinal": 286
+    },
+    {
+      "name": "glTexCoord3s",
+      "ordinal": 287
+    },
+    {
+      "name": "glTexCoord3sv",
+      "ordinal": 288
+    },
+    {
+      "name": "glTexCoord4d",
+      "ordinal": 289
+    },
+    {
+      "name": "glTexCoord4dv",
+      "ordinal": 290
+    },
+    {
+      "name": "glTexCoord4f",
+      "ordinal": 291
+    },
+    {
+      "name": "glTexCoord4fv",
+      "ordinal": 292
+    },
+    {
+      "name": "glTexCoord4i",
+      "ordinal": 293
+    },
+    {
+      "name": "glTexCoord4iv",
+      "ordinal": 294
+    },
+    {
+      "name": "glTexCoord4s",
+      "ordinal": 295
+    },
+    {
+      "name": "glTexCoord4sv",
+      "ordinal": 296
+    },
+    {
+      "name": "glTexCoordPointer",
+      "ordinal": 297
+    },
+    {
+      "name": "glTexEnvf",
+      "ordinal": 298
+    },
+    {
+      "name": "glTexEnvfv",
+      "ordinal": 299
+    },
+    {
+      "name": "glTexEnvi",
+      "ordinal": 300
+    },
+    {
+      "name": "glTexEnviv",
+      "ordinal": 301
+    },
+    {
+      "name": "glTexGend",
+      "ordinal": 302
+    },
+    {
+      "name": "glTexGendv",
+      "ordinal": 303
+    },
+    {
+      "name": "glTexGenf",
+      "ordinal": 304
+    },
+    {
+      "name": "glTexGenfv",
+      "ordinal": 305
+    },
+    {
+      "name": "glTexGeni",
+      "ordinal": 306
+    },
+    {
+      "name": "glTexGeniv",
+      "ordinal": 307
+    },
+    {
+      "name": "glTexImage1D",
+      "ordinal": 308
+    },
+    {
+      "name": "glTexImage2D",
+      "ordinal": 309
+    },
+    {
+      "name": "glTexParameterf",
+      "ordinal": 310
+    },
+    {
+      "name": "glTexParameterfv",
+      "ordinal": 311
+    },
+    {
+      "name": "glTexParameteri",
+      "ordinal": 312
+    },
+    {
+      "name": "glTexParameteriv",
+      "ordinal": 313
+    },
+    {
+      "name": "glTexSubImage1D",
+      "ordinal": 314
+    },
+    {
+      "name": "glTexSubImage2D",
+      "ordinal": 315
+    },
+    {
+      "name": "glTranslated",
+      "ordinal": 316
+    },
+    {
+      "name": "glTranslatef",
+      "ordinal": 317
+    },
+    {
+      "name": "glVertex2d",
+      "ordinal": 318
+    },
+    {
+      "name": "glVertex2dv",
+      "ordinal": 319
+    },
+    {
+      "name": "glVertex2f",
+      "ordinal": 320
+    },
+    {
+      "name": "glVertex2fv",
+      "ordinal": 321
+    },
+    {
+      "name": "glVertex2i",
+      "ordinal": 322
+    },
+    {
+      "name": "glVertex2iv",
+      "ordinal": 323
+    },
+    {
+      "name": "glVertex2s",
+      "ordinal": 324
+    },
+    {
+      "name": "glVertex2sv",
+      "ordinal": 325
+    },
+    {
+      "name": "glVertex3d",
+      "ordinal": 326
+    },
+    {
+      "name": "glVertex3dv",
+      "ordinal": 327
+    },
+    {
+      "name": "glVertex3f",
+      "ordinal": 328
+    },
+    {
+      "name": "glVertex3fv",
+      "ordinal": 329
+    },
+    {
+      "name": "glVertex3i",
+      "ordinal": 330
+    },
+    {
+      "name": "glVertex3iv",
+      "ordinal": 331
+    },
+    {
+      "name": "glVertex3s",
+      "ordinal": 332
+    },
+    {
+      "name": "glVertex3sv",
+      "ordinal": 333
+    },
+    {
+      "name": "glVertex4d",
+      "ordinal": 334
+    },
+    {
+      "name": "glVertex4dv",
+      "ordinal": 335
+    },
+    {
+      "name": "glVertex4f",
+      "ordinal": 336
+    },
+    {
+      "name": "glVertex4fv",
+      "ordinal": 337
+    },
+    {
+      "name": "glVertex4i",
+      "ordinal": 338
+    },
+    {
+      "name": "glVertex4iv",
+      "ordinal": 339
+    },
+    {
+      "name": "glVertex4s",
+      "ordinal": 340
+    },
+    {
+      "name": "glVertex4sv",
+      "ordinal": 341
+    },
+    {
+      "name": "glVertexPointer",
+      "ordinal": 342
+    },
+    {
+      "name": "glViewport",
+      "ordinal": 343
+    },
+    {
+      "name": "wglChoosePixelFormat",
+      "ordinal": 344
+    },
+    {
+      "name": "wglCopyContext",
+      "ordinal": 345
+    },
+    {
+      "name": "wglCreateContext",
+      "ordinal": 346
+    },
+    {
+      "name": "wglCreateLayerContext",
+      "ordinal": 347
+    },
+    {
+      "name": "wglDeleteContext",
+      "ordinal": 348
+    },
+    {
+      "name": "wglDescribeLayerPlane",
+      "ordinal": 349
+    },
+    {
+      "name": "wglDescribePixelFormat",
+      "ordinal": 350
+    },
+    {
+      "name": "wglGetCurrentContext",
+      "ordinal": 351
+    },
+    {
+      "name": "wglGetCurrentDC",
+      "ordinal": 352
+    },
+    {
+      "name": "wglGetDefaultProcAddress",
+      "ordinal": 353
+    },
+    {
+      "name": "wglGetLayerPaletteEntries",
+      "ordinal": 354
+    },
+    {
+      "name": "wglGetPixelFormat",
+      "ordinal": 355
+    },
+    {
+      "name": "wglGetProcAddress",
+      "ordinal": 356
+    },
+    {
+      "name": "wglMakeCurrent",
+      "ordinal": 357
+    },
+    {
+      "name": "wglRealizeLayerPalette",
+      "ordinal": 358
+    },
+    {
+      "name": "wglSetLayerPaletteEntries",
+      "ordinal": 359
+    },
+    {
+      "name": "wglSetPixelFormat",
+      "ordinal": 360
+    },
+    {
+      "name": "wglShareLists",
+      "ordinal": 361
+    },
+    {
+      "name": "wglSwapBuffers",
+      "ordinal": 362
+    },
+    {
+      "name": "wglSwapLayerBuffers",
+      "ordinal": 363
+    },
+    {
+      "name": "wglSwapMultipleBuffers",
+      "ordinal": 364
+    },
+    {
+      "name": "wglUseFontBitmapsA",
+      "ordinal": 365
+    },
+    {
+      "name": "wglUseFontBitmapsW",
+      "ordinal": 366
+    },
+    {
+      "name": "wglUseFontOutlinesA",
+      "ordinal": 367
+    },
+    {
+      "name": "wglUseFontOutlinesW",
+      "ordinal": 368
+    }
+  ]
+}

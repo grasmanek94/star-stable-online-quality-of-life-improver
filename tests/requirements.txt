@@ -1,0 +1,2 @@
+# Optional linked-assembly emulation only; normal builds/native tests need no pip packages.
+unicorn==2.1.4
