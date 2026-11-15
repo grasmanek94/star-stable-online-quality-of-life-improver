@@ -1,0 +1,164 @@
+{
+  "rider": {
+    "rva": "0x794c8c",
+    "patch_offset": 3,
+    "patch_rva": "0x794c8f",
+    "target_rva": "0x799ad0",
+    "window": "48 8b ce e8 3c 4e 00 00 84 c0 74 7f 33 d2 48 8b ce e8 3e c4 93 ff 25 ff ff ff f3 44 8b c0 33 d2 48 8b ce e8 fc d3 93 ff f3 0f 10 b6 4c 01 00 00",
+    "pattern": "48 8B CE E8 ?? ?? ?? ?? 84 C0 74 7F 33 D2 48 8B CE E8 3E C4 93 FF 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 FC D3 93 FF F3 0F 10 B6 4C 01 00 00",
+    "patch_length": 5
+  },
+  "horse": {
+    "rva": "0x1e2865",
+    "patch_offset": 7,
+    "patch_rva": "0x1e286c",
+    "target_rva": "0x1e6f50",
+    "window": "4c 8d be e8 0a 00 00 e8 df 46 00 00 84 c0 74 58 33 d2 48 8b ce e8 61 e8 ee ff 25 ff ff ff f3 33 d2 44 8b c0 48 8b ce e8 1f f8 ee ff f3 41 0f 10",
+    "pattern": "4C 8D BE E8 0A 00 00 E8 ?? ?? ?? ?? 84 C0 74 58 33 D2 48 8B CE E8 61 E8 EE FF 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 1F F8 EE FF F3 41 0F 10",
+    "patch_length": 5
+  },
+  "pet": {
+    "rva": "0x3c1265",
+    "patch_offset": 6,
+    "patch_rva": "0x3c126b",
+    "target_rva": "0x799ad0",
+    "window": "48 8b cd 0f 28 f8 e8 60 88 3d 00 f3 0f 10 93 f8 01 00 00 0f 57 f6 84 c0 74 0a f3 0f 5c d7 f3 0f 5f d6 eb 0c f3 0f 58 d7 f3 0f 5d 93 fc 01 00 00",
+    "pattern": "48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 F8 01 00 00 0F 57 F6 84 C0 74 0A F3 0F 5C D7 F3 0F 5F D6 EB 0C F3 0F 58 D7 F3 0F 5D 93 FC 01 00 00",
+    "patch_length": 5
+  },
+  "lod1": {
+    "rva": "0x28c28d",
+    "patch_offset": 10,
+    "patch_rva": "0x28c297",
+    "target_rva": "0x69e540",
+    "window": "48 8b 97 70 01 00 00 48 8b ce e8 a4 22 41 00 f3 45 0f 58 ca 45 0f 2f c1 e9 de",
+    "pattern": "48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 45 0F 58 CA 45 0F 2F C1 E9 DE",
+    "patch_length": 5
+  },
+  "lod2": {
+    "rva": "0x28c4ab",
+    "patch_offset": 10,
+    "patch_rva": "0x28c4b5",
+    "target_rva": "0x69e540",
+    "window": "48 8b 97 70 01 00 00 48 8b ce e8 86 20 41 00 f3 44 0f 10 a5 a8 01 00 00 e9 a4",
+    "pattern": "48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 44 0F 10 A5 A8 01 00 00 E9 A4",
+    "patch_length": 5
+  },
+  "lod3": {
+    "rva": "0x28c55d",
+    "patch_offset": 10,
+    "patch_rva": "0x28c567",
+    "target_rva": "0x69e540",
+    "window": "48 8b 97 70 01 00 00 48 8b ce e8 d4 1f 41 00 f3 41 0f 58 fa 44 0f 2f c7 0f 87 ff",
+    "pattern": "48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 58 FA 44 0F 2F C7 0F 87 FF",
+    "patch_length": 5
+  },
+  "lod4": {
+    "rva": "0x28cd96",
+    "patch_offset": 10,
+    "patch_rva": "0x28cda0",
+    "target_rva": "0x69e540",
+    "window": "48 8b 97 70 01 00 00 48 8b ce e8 9b 17 41 00 eb 33 e8 44 bf 36 00 4c 8b f0 48 85",
+    "pattern": "48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? EB 33 E8 44 BF 36 00 4C 8B F0 48 85",
+    "patch_length": 5
+  },
+  "mark1": {
+    "rva": "0x295e9c",
+    "patch_offset": 18,
+    "patch_rva": "0x295eae",
+    "target_rva": "0x69ebc0",
+    "window": "48 8d 83 48 02 00 00 48 89 45 a8 48 8d 55 a0 48 8b cf e8 0d 8d 40 00 48 85 ff 0f 84 3f 01 00 00 83 3d dd a5 06 01 00 0f 84",
+    "pattern": "48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 85 FF 0F 84 3F 01 00 00 83 3D DD A5 06 01 00 0F 84",
+    "patch_length": 5
+  },
+  "mark2": {
+    "rva": "0x295f8f",
+    "patch_offset": 18,
+    "patch_rva": "0x295fa1",
+    "target_rva": "0x69ebc0",
+    "window": "48 8d 83 48 02 00 00 48 89 45 a8 48 8d 55 a0 48 8b cf e8 1a 8c 40 00 48 8b 05 c3 68 0e 01 48 85 c0 74 49 f6 83 a0 03 00 00",
+    "pattern": "48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 8B 05 C3 68 0E 01 48 85 C0 74 49 F6 83 A0 03 00 00",
+    "patch_length": 5
+  },
+  "mark3": {
+    "rva": "0x295fdf",
+    "patch_offset": 18,
+    "patch_rva": "0x295ff1",
+    "target_rva": "0x69ebc0",
+    "window": "48 8d 83 48 02 00 00 48 89 45 a8 48 8d 55 a0 48 8b cf e8 ca 8b 40 00 eb 03 45 32 e4 48 85 f6 74 29 4c 8b 36 e8 18 bb e6",
+    "pattern": "48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? EB 03 45 32 E4 48 85 F6 74 29 4C 8B 36 E8 18 BB E6",
+    "patch_length": 5
+  },
+  "collect": {
+    "rva": "0x36d92b",
+    "patch_offset": 17,
+    "patch_rva": "0x36d93c",
+    "target_rva": "0x69ebc0",
+    "window": "48 89 45 e8 49 8b cf f3 0f 7f 45 f0 f3 0f 7f 4d 08 e8 7f 12 33 00 44 0f b6 a7 2c 01 00 00 49 8b ce 48 89 b4 24 c8",
+    "pattern": "48 89 45 E8 49 8B CF F3 0F 7F 45 F0 F3 0F 7F 4D 08 E8 ?? ?? ?? ?? 44 0F B6 A7 2C 01 00 00 49 8B CE 48 89 B4 24 C8",
+    "patch_length": 5
+  },
+  "saleDraw": {
+    "rva": "0x330dd0",
+    "patch_offset": 13,
+    "patch_rva": "0x330ddd",
+    "target_rva": "0x69ebc0",
+    "window": "f3 44 0f 11 5d b7 48 8d 55 97 49 8b cc e8 de dd 36 00 48 8d 8f f0 00 00 00 e8 02 7f 2c 00 48 8b d8",
+    "pattern": "F3 44 0F 11 5D B7 48 8D 55 97 49 8B CC E8 ?? ?? ?? ?? 48 8D 8F F0 00 00 00 E8 02 7F 2C 00 48 8B D8",
+    "patch_length": 5
+  },
+  "npcAnim": {
+    "rva": "0x28ce4e",
+    "patch_offset": 15,
+    "patch_rva": "0x28ce5d",
+    "target_rva": "0xfcf00",
+    "window": "f3 0f 59 c6 f3 41 0f 59 c4 0f 28 c8 49 8b ce e8 9e 00 e7 ff 49 8b cf e8 36 46 39 00 48 85 c0 0f 84 b3 00 00 00",
+    "pattern": "F3 0F 59 C6 F3 41 0F 59 C4 0F 28 C8 49 8B CE E8 ?? ?? ?? ?? 49 8B CF E8 36 46 39 00 48 85 C0 0F 84 B3 00 00 00",
+    "patch_length": 5
+  },
+  "charText0x28d49c": {
+    "rva": "0x28d49c",
+    "patch_offset": 0,
+    "patch_rva": "0x28d49c",
+    "target_rva": "0x6a1d20",
+    "window": "e8 7f 48 41 00 eb 04 45 0f 57 ff 48 8b 07 48 8b cf ff 90 b8 03 00 00 85",
+    "pattern": "E8 ?? ?? ?? ?? EB 04 45 0F 57 FF 48 8B 07 48 8B CF FF 90 B8 03 00 00 85",
+    "patch_length": 5
+  },
+  "charText0x28d74e": {
+    "rva": "0x28d74e",
+    "patch_offset": 0,
+    "patch_rva": "0x28d74e",
+    "target_rva": "0x6a1d20",
+    "window": "e8 cd 45 41 00 4c 8b c6 49 8b d7 48 8b cf e8 df 88 e4 ff 90 48 8b 8d a8",
+    "pattern": "E8 ?? ?? ?? ?? 4C 8B C6 49 8B D7 48 8B CF E8 DF 88 E4 FF 90 48 8B 8D A8",
+    "patch_length": 5
+  },
+  "questText0x296646": {
+    "rva": "0x296646",
+    "patch_offset": 0,
+    "patch_rva": "0x296646",
+    "target_rva": "0x6a1d20",
+    "window": "e8 d5 b6 40 00 eb 1b 48 85 f6 74 16 48 8b 1e e8 c6 b4 e6 ff 4c 8b c0 33",
+    "pattern": "E8 ?? ?? ?? ?? EB 1B 48 85 F6 74 16 48 8B 1E E8 C6 B4 E6 FF 4C 8B C0 33",
+    "patch_length": 5
+  },
+  "skinGate": {
+    "rva": "0xe7d3c",
+    "patch_offset": 13,
+    "patch_rva": "0xe7d49",
+    "target_rva": "0xcf220",
+    "window": "f6 81 5c 03 00 00 20 0f 85 ff 03 00 00 e8 d2 74 fe ff 84 c0 0f 84 e4 03 00 00 4d 8d b7 28 01 00 00 49 83 3e 00 0f 84",
+    "pattern": "F6 81 5C 03 00 00 20 0F 85 FF 03 00 00 E8 ?? ?? ?? ?? 84 C0 0F 84 E4 03 00 00 4D 8D B7 28 01 00 00 49 83 3E 00 0F 84",
+    "patch_length": 5
+  },
+  "meshGate": {
+    "rva": "0xd3bdc",
+    "patch_offset": 9,
+    "patch_rva": "0xd3be5",
+    "target_rva": "0xcf220",
+    "window": "0f 84 f5 01 00 00 48 8b cf e8 36 b6 ff ff 84 c0 0f 84 e5 01 00 00 4c 8b b7 b0 00 00 00 4c 89 75 a0 48 8b",
+    "pattern": "0F 84 F5 01 00 00 48 8B CF E8 ?? ?? ?? ?? 84 C0 0F 84 E5 01 00 00 4C 8B B7 B0 00 00 00 4C 89 75 A0 48 8B",
+    "patch_length": 5
+  }
+}

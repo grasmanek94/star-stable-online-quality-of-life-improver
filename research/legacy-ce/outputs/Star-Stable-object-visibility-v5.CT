@@ -1,0 +1,1048 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"MASTER v5: object visibility (1=hide, 0=normal) [48d3709b]"</Description>
+      <Options moHideChildren="1" />
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// Experimental expanded visibility; baseline 645.348067. Disable v2/v3/v4 first.
+
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local NATIVE_C=[==[
+/* Pure classifier for CE's built-in x64 C compiler. No game calls, allocation,
+   object writes or external imports. CFG_ADDRESS is supplied by the loader.
+   All offsets below are guarded to the analyzed 645.348067 executable. */
+typedef unsigned char U8;
+typedef unsigned int U32;
+typedef unsigned long long U64;
+typedef struct {
+    U32 generation,role,parent,root,rootGeneration,rootParent;
+    U64 rootVtable;
+} Cache;
+typedef struct {
+    volatile U8 active;
+    U8 pad[15];
+    volatile U8 hide[11];
+    U8 pad2[37];
+    U64 base, registryAddress, localRefAddress, cacheAddress;
+    U32 capacity, epoch;
+    U64 mesh, skin, particleEx, particle, playerSSO, playerTP, horse, pet;
+    U64 npc, sale, collect, checkpoint;
+    U8 pad3[56];
+    volatile U64 hits[11];
+} Config;
+#ifndef CFG_ADDRESS
+#define CFG_ADDRESS 0
+#endif
+#define C ((Config *)(U64)CFG_ADDRESS)
+static U64 Q(U64 p,U32 o) {return *(volatile U64 *)(p+o);}
+static U32 D(U64 p,U32 o) {return *(volatile U32 *)(p+o);}
+static U8 B(U64 p,U32 o) {return *(volatile U8 *)(p+o);}
+enum { PLAYER_HORSE=1, PLAYER=2, PLAYER_PET=3, NPC_ANIMAL=4,
+       NPC=5, NPC_HORSE=6, STANDALONE=7, SALE=8, COINS=9, MARKER=10,
+       TEXT=11, KEEP=255 };
+
+static U8 lower(U8 c) { return c&gt;='A'&amp;&amp;c&lt;='Z' ? c+32 : c; }
+static int letter(U8 c) { c=lower(c); return c&gt;='a'&amp;&amp;c&lt;='z'; }
+/* Literal, underscore/digit and CamelCase boundaries reduce accidental matches
+   such as Catherine -&gt; cat or SeahorsePoint -&gt; horse. This remains a heuristic. */
+static int word(const char *s,const char *w,int limit) {
+    int i,j; U8 before,first,next,last;
+    for(i=0;i&lt;limit &amp;&amp; s[i];i++) {
+        before=i ? (U8)s[i-1] : 0; first=(U8)s[i];
+        if(i &amp;&amp; letter(before) &amp;&amp; !(before&gt;='a'&amp;&amp;before&lt;='z' &amp;&amp; first&gt;='A'&amp;&amp;first&lt;='Z')) continue;
+        for(j=0;w[j] &amp;&amp; i+j&lt;limit &amp;&amp; s[i+j] &amp;&amp; lower((U8)s[i+j])==(U8)w[j];j++);
+        if(w[j] || i+j&gt;=limit) continue;
+        next=(U8)s[i+j];last=j?(U8)s[i+j-1]:0;
+        if(!letter(next) || (last&gt;='a'&amp;&amp;last&lt;='z' &amp;&amp; next&gt;='A'&amp;&amp;next&lt;='Z')) return 1;
+    }
+    return 0;
+}
+static const char *name(U64 record,int *limit) {
+    U64 ptr;
+    if(B(record,31)) {
+        ptr=Q(record,24)&lt;&lt;1;
+        if(ptr&lt;0x10000 || ptr&gt;=0x0000800000000000ULL) return 0;
+        *limit=96;return (const char *)ptr;
+    }
+    *limit=7;return (const char *)(record+24);
+}
+static U64 resolve(U64 begin,U64 count,U64 ref) {
+    U32 i=D(ref,12); U64 rec;
+    if(i&gt;=count) return 0;
+    rec=begin+((U64)i&lt;&lt;6);
+    return D(rec,44)==D(ref,8) ? Q(rec,32) : 0;
+}
+static U32 npcRole(U64 record) {
+    int n;const char *s=name(record,&amp;n);if(!s)return NPC;
+    /* Known human names containing horse terms must stay in the human bucket. */
+    if(word(s,"trainer",n)||word(s,"shopkeeper",n)||word(s,"girl",n)||word(s,"stylist",n))return NPC;
+    if(word(s,"horse",n)||word(s,"horses",n)||word(s,"pony",n)||word(s,"foal",n)||word(s,"donkey",n)||word(s,"mare",n)||word(s,"stallion",n))return NPC_HORSE;
+    if(word(s,"cat",n)||word(s,"dog",n)||word(s,"rabbit",n)||word(s,"bunny",n)||word(s,"fox",n)||word(s,"hen",n)||word(s,"chicken",n)||word(s,"cow",n)||word(s,"sheep",n)||word(s,"goat",n)||word(s,"pig",n)||word(s,"dove",n)||word(s,"crow",n)||word(s,"magpie",n)||word(s,"owl",n)||word(s,"bird",n)||word(s,"squirrel",n)||word(s,"raccoon",n)||word(s,"duck",n)||word(s,"deer",n)||word(s,"frog",n)||word(s,"seal",n)||word(s,"crab",n)||word(s,"butterfly",n))return NPC_ANIMAL;
+    return NPC;
+}
+/* Positive cache hits still check the root's ancestors for ownership. A
+   higher grouping node can be reparented without changing the mesh or root. */
+static int protectedRoot(U64 begin,U64 count,U32 index) {
+    U32 depth,parent;U64 record,ptr,vt,owner;
+    for(depth=0;depth&lt;32;depth++) {
+        if(index==0x0BADF00D)return 0;
+        if(index&gt;=count)return 1;
+        record=begin+((U64)index&lt;&lt;6);ptr=Q(record,32);
+        if(!ptr||D(ptr,132)!=index||D(ptr,128)!=D(record,44))return 1;
+        vt=Q(ptr,0);
+        if(vt==C-&gt;checkpoint)return 1;
+        if((vt==C-&gt;playerSSO||vt==C-&gt;playerTP||vt==C-&gt;horse||vt==C-&gt;pet)&amp;&amp;(B(ptr,144)&amp;4))return 1;
+        if(vt==C-&gt;horse||vt==C-&gt;pet) {
+            owner=resolve(begin,count,ptr+(vt==C-&gt;horse?152:584));
+            if(owner&amp;&amp;(Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)&amp;&amp;(B(owner,144)&amp;4))return 1;
+        }
+        parent=D(record,40);if(parent==index)return 1;index=parent;
+    }
+    return 1;
+}
+static U32 role(U64 actor) {
+    U64 registry=Q(C-&gt;registryAddress,0),begin,end,count,record,current,ptr,vt,owner;
+    U32 index,generation,candidate=KEEP,typed=0,parent,depth,rootIndex,cacheable=1;
+    Cache *slot=0;
+    if(!registry)return KEEP;
+    begin=Q(registry,0);end=Q(registry,8);
+    if(!begin||end&lt;begin||end-begin&gt;0x10000000ULL||((end-begin)&amp;63))return KEEP;
+    count=(end-begin)&gt;&gt;6;index=D(actor,132);generation=D(actor,128);
+    if(index&gt;=count)return KEEP;
+    record=begin+((U64)index&lt;&lt;6);
+    if(D(record,44)!=generation||Q(record,32)!=actor)return KEEP;
+    if(index&lt;C-&gt;capacity) {
+        slot=(Cache *)(C-&gt;cacheAddress+(U64)index*32);
+        if((slot-&gt;role&gt;&gt;16)==C-&gt;epoch &amp;&amp; slot-&gt;generation==generation &amp;&amp; slot-&gt;parent==D(record,40) &amp;&amp; slot-&gt;root&lt;count) {
+            U64 rr=begin+((U64)slot-&gt;root&lt;&lt;6),rp=Q(rr,32);
+            if(rp &amp;&amp; D(rr,44)==slot-&gt;rootGeneration &amp;&amp; D(rr,40)==slot-&gt;rootParent &amp;&amp; Q(rp,0)==slot-&gt;rootVtable) {
+                U32 cached=slot-&gt;role&amp;65535;
+                return cached==KEEP||!protectedRoot(begin,count,slot-&gt;root)?cached:KEEP;
+            }
+        }
+    }
+    rootIndex=index;
+    current=index;
+    for(depth=0;depth&lt;32;depth++) {
+        if(current&gt;=count){if(current!=0x0BADF00D)return KEEP;break;}
+        record=begin+(current&lt;&lt;6);ptr=Q(record,32);
+        if(!ptr)return KEEP;
+        if(D(ptr,132)!=current||D(ptr,128)!=D(record,44))return KEEP;
+        vt=Q(ptr,0);
+        /* Check ownership even after a category is found in a descendant. */
+        if(vt==C-&gt;playerSSO||vt==C-&gt;playerTP) {
+            cacheable=0;
+            if(B(ptr,144)&amp;4){candidate=KEEP;break;}
+            if(!typed){candidate=PLAYER;typed=1;}
+        } else if(vt==C-&gt;horse) {
+            cacheable=0;
+            owner=resolve(begin,count,ptr+152);
+            if((B(ptr,144)&amp;4)||(owner &amp;&amp; (Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP) &amp;&amp; (B(owner,144)&amp;4))){candidate=KEEP;break;}
+            if(!typed){candidate=!owner?STANDALONE:((Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)?PLAYER_HORSE:NPC_HORSE);typed=1;}
+        } else if(vt==C-&gt;pet) {
+            cacheable=0;
+            owner=resolve(begin,count,ptr+584);
+            if((B(ptr,144)&amp;4)||(owner &amp;&amp; (Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP) &amp;&amp; (B(owner,144)&amp;4))){candidate=KEEP;break;}
+            if(!typed){candidate=owner&amp;&amp;(Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)?PLAYER_PET:NPC_ANIMAL;typed=1;}
+        } else if(vt==C-&gt;checkpoint) {
+            cacheable=0;candidate=KEEP;break;
+        } else if(vt==C-&gt;npc &amp;&amp; !typed) {
+            if(candidate!=MARKER)candidate=npcRole(record);typed=1;rootIndex=(U32)current;
+        } else if(vt==C-&gt;sale &amp;&amp; !typed) {
+            candidate=SALE;typed=1;rootIndex=(U32)current;
+        } else if(vt==C-&gt;collect &amp;&amp; !typed) {
+            candidate=COINS;typed=1;rootIndex=(U32)current;
+        } else if(!typed) {
+            int n;const char *s=name(record,&amp;n);
+            if(s) {
+                if(word(s,"coin",n)||word(s,"coins",n)||word(s,"shilling",n)||word(s,"shillings",n)){candidate=COINS;rootIndex=(U32)current;}
+                if(word(s,"exclamation",n)||word(s,"question",n)||word(s,"questionmark",n)||word(s,"exclamationmark",n)){candidate=MARKER;rootIndex=(U32)current;}
+            }
+        }
+        parent=D(record,40);if(parent==current)return KEEP;current=parent;
+    }
+    if(depth==32)return KEEP;
+    if(slot &amp;&amp; cacheable){
+        U64 rr=begin+((U64)rootIndex&lt;&lt;6),rp=Q(rr,32);
+        slot-&gt;role=0;slot-&gt;generation=generation;slot-&gt;parent=D(begin+((U64)index&lt;&lt;6),40);
+        slot-&gt;root=rootIndex;slot-&gt;rootGeneration=D(rr,44);slot-&gt;rootParent=D(rr,40);slot-&gt;rootVtable=rp?Q(rp,0):0;
+        slot-&gt;role=(C-&gt;epoch&lt;&lt;16)|candidate;
+    }
+    return candidate;
+}
+static int hideRole(U32 r) {
+    if(r&gt;=1 &amp;&amp; r&lt;=11 &amp;&amp; C-&gt;hide[r-1]==1){C-&gt;hits[r-1]++;return 1;}return 0;
+}
+int SSO5_actor(U64 actor) {return C-&gt;active &amp;&amp; actor ? hideRole(role(actor)) : 0;}
+int SSO5_visual(U64 actor) {
+    U64 vt;
+    if(!C-&gt;active || !actor)return 0;
+    vt=Q(actor,0);
+    if(vt!=C-&gt;mesh &amp;&amp; vt!=C-&gt;skin &amp;&amp; vt!=C-&gt;particleEx &amp;&amp; vt!=C-&gt;particle)return 0;
+    return hideRole(role(actor));
+}
+int SSO5_flag(U32 index) {
+    if(!C-&gt;active||index&gt;=11||C-&gt;hide[index]!=1)return 0;
+    C-&gt;hits[index]++;return 1;
+}
+/* Kept as exports to let the isolated harness verify the real compiled layout. */
+int SSO5_sizeof_config(void) {return sizeof(Config);}
+int SSO5_offset_hits(void) {return (int)((U64)&amp;C-&gt;hits-(U64)C);}
+
+]==]
+local SITE_DEFINITIONS={
+{name='rider',pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 7F 33 D2 48 8B CE E8 3E C4 93 FF 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 FC D3 93 FF F3 0F 10 B6 4C 01 00 00',patch_offset=3,target_rva=0x799ad0},
+{name='horse',pattern='4C 8D BE E8 0A 00 00 E8 ?? ?? ?? ?? 84 C0 74 58 33 D2 48 8B CE E8 61 E8 EE FF 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 1F F8 EE FF F3 41 0F 10',patch_offset=7,target_rva=0x1e6f50},
+{name='pet',pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 F8 01 00 00 0F 57 F6 84 C0 74 0A F3 0F 5C D7 F3 0F 5F D6 EB 0C F3 0F 58 D7 F3 0F 5D 93 FC 01 00 00',patch_offset=6,target_rva=0x799ad0},
+{name='lod1',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 45 0F 58 CA 45 0F 2F C1 E9 DE',patch_offset=10,target_rva=0x69e540},
+{name='lod2',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 44 0F 10 A5 A8 01 00 00 E9 A4',patch_offset=10,target_rva=0x69e540},
+{name='lod3',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 58 FA 44 0F 2F C7 0F 87 FF',patch_offset=10,target_rva=0x69e540},
+{name='lod4',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? EB 33 E8 44 BF 36 00 4C 8B F0 48 85',patch_offset=10,target_rva=0x69e540},
+{name='mark1',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 85 FF 0F 84 3F 01 00 00 83 3D DD A5 06 01 00 0F 84',patch_offset=18,target_rva=0x69ebc0},
+{name='mark2',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 8B 05 C3 68 0E 01 48 85 C0 74 49 F6 83 A0 03 00 00',patch_offset=18,target_rva=0x69ebc0},
+{name='mark3',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? EB 03 45 32 E4 48 85 F6 74 29 4C 8B 36 E8 18 BB E6',patch_offset=18,target_rva=0x69ebc0},
+{name='collect',pattern='48 89 45 E8 49 8B CF F3 0F 7F 45 F0 F3 0F 7F 4D 08 E8 ?? ?? ?? ?? 44 0F B6 A7 2C 01 00 00 49 8B CE 48 89 B4 24 C8',patch_offset=17,target_rva=0x69ebc0},
+{name='saleDraw',pattern='F3 44 0F 11 5D B7 48 8D 55 97 49 8B CC E8 ?? ?? ?? ?? 48 8D 8F F0 00 00 00 E8 02 7F 2C 00 48 8B D8',patch_offset=13,target_rva=0x69ebc0},
+{name='npcAnim',pattern='F3 0F 59 C6 F3 41 0F 59 C4 0F 28 C8 49 8B CE E8 ?? ?? ?? ?? 49 8B CF E8 36 46 39 00 48 85 C0 0F 84 B3 00 00 00',patch_offset=15,target_rva=0xfcf00},
+{name='charText0x28d49c',pattern='E8 ?? ?? ?? ?? EB 04 45 0F 57 FF 48 8B 07 48 8B CF FF 90 B8 03 00 00 85',patch_offset=0,target_rva=0x6a1d20},
+{name='charText0x28d74e',pattern='E8 ?? ?? ?? ?? 4C 8B C6 49 8B D7 48 8B CF E8 DF 88 E4 FF 90 48 8B 8D A8',patch_offset=0,target_rva=0x6a1d20},
+{name='questText0x296646',pattern='E8 ?? ?? ?? ?? EB 1B 48 85 F6 74 16 48 8B 1E E8 C6 B4 E6 FF 4C 8B C0 33',patch_offset=0,target_rva=0x6a1d20},
+{name='skinGate',pattern='F6 81 5C 03 00 00 20 0F 85 FF 03 00 00 E8 ?? ?? ?? ?? 84 C0 0F 84 E4 03 00 00 4D 8D B7 28 01 00 00 49 83 3E 00 0F 84',patch_offset=13,target_rva=0xcf220},
+{name='meshGate',pattern='0F 84 F5 01 00 00 48 8B CF E8 ?? ?? ?? ?? 84 C0 0F 84 E5 01 00 00 4C 8B B7 B0 00 00 00 4C 89 75 A0 48 8B',patch_offset=9,target_rva=0xcf220},
+}
+-- The generator inserts NATIVE_C and SITE_DEFINITIONS above this loader.
+-- All activation is performed by the user's single AA entry. No autorun Lua.
+local key='SSOVisibilityCategoriesV5'
+local symbol='SSO5_CONFIG'
+local revision='v5-48d3709bc62137f254ff'
+local function fail(s) error('SSO categories v5: '..s,0) end
+local function read(a,n)
+ local b=readBytes(a,n,true);if not b or #b~=n then fail(string.format('read failed at %X',a)) end;return b
+end
+local function equal(a,b)
+ if not a or not b or #a~=#b then return false end
+ for i=1,#a do if a[i]~=b[i] then return false end end;return true
+end
+local function hex(b)
+ local s={};for i,v in ipairs(b) do s[i]=string.format('%02X',v) end;return table.concat(s,' ')
+end
+local function u32(a)local b=read(a,4);return b[1]+b[2]*256+b[3]*65536+b[4]*16777216 end
+local function i32(a)local x=u32(a);return x&gt;=2147483648 and x-4294967296 or x end
+local function info()
+ local base=getAddressSafe('SSOClient.exe');if not base then fail('select SSOClient.exe first') end
+ if not equal(read(base,2),{0x4D,0x5A}) then fail('invalid module') end
+ local pe=base+u32(base+0x3C)
+ if not equal(read(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires AMD64 PE') end
+ local stamp=u32(pe+8);local size=u32(pe+24+56)
+ -- New classifier layouts are baseline-specific, unlike v4's three-byte patch.
+ if stamp~=0x6AEB5BD3 or size~=0x014AF000 then fail('this object-layout version is for client 645.348067. Update review required; v4 remains separate.') end
+ local n=read(pe+6,2);n=n[1]+256*n[2];if n&lt;1 or n&gt;96 then fail('invalid section count') end
+ local os=read(pe+20,2);os=os[1]+256*os[2];local sections={}
+ for i=0,n-1 do
+  local h=pe+24+os+i*40
+  if (u32(h+36)&amp;0x20000000)~=0 then
+   local a=base+u32(h+12);local z=math.max(u32(h+8),u32(h+16))
+   if a&lt;base or a+z&gt;base+size then fail('bad executable section') end
+   sections[#sections+1]={a,a+z}
+  end
+ end
+ return {base=base,stamp=stamp,size=size,pid=getOpenedProcessID(),sections=sections}
+end
+local function code(i,a,n)
+ for _,s in ipairs(i.sections) do if a&gt;=s[1] and a+n&lt;=s[2] then return true end end;return false
+end
+local function matches(b,pattern)
+ local n=0;for p in pattern:gmatch('%S+') do n=n+1;if p~='??' and b[n]~=tonumber(p,16) then return false end end
+ return n==#b
+end
+local function scan(i,d)
+ local n=0;for _ in d.pattern:gmatch('%S+') do n=n+1 end
+ local list=AOBScan(d.pattern,'+X',0,'1');local hits={}
+ if list then
+  local ok,err=pcall(function()for j=0,list.Count-1 do local a=tonumber(list[j],16);if a and code(i,a,n) then hits[#hits+1]=a end end end)
+  list.destroy();if not ok then fail(tostring(err)) end
+ end
+ if #hits~=1 then fail(d.name..' has '..#hits..' executable-module matches; expected one. Disable older tables or review this build.') end
+ local at=hits[1];local original=read(at,n);if not matches(original,d.pattern) then fail('code changed during scan') end
+ local patch=at+d.patch_offset
+ if read(patch,1)[1]~=0xE8 then fail(d.name..' is not a near CALL') end
+ local target=patch+5+i32(patch+1)
+ if target~=i.base+d.target_rva or not code(i,target,1) then fail(d.name..' helper relationship changed') end
+ return {name=d.name,address=at,patch=patch,target=target,original=original,offset=d.patch_offset}
+end
+local function identity(s)
+ local i=info();if i.pid~=s.pid or i.base~=s.base or i.stamp~=s.stamp or i.size~=s.size then fail('selected process/image changed; do not restore saved addresses into a restarted client') end;return i
+end
+local function aa(asserts,writes)
+ if #writes==0 then return end
+ local ok,why=autoAssemble(table.concat(asserts,'\n')..'\n'..table.concat(writes,'\n'),false)
+ if not ok then fail('Auto Assembler failed: '..tostring(why)) end
+end
+local function bytewrite(a,values)
+ if not writeBytes(a,values) or not equal(read(a,#values),values) then fail('data write/read-back failed') end
+end
+local function qwrite(a,x)
+ if not writeQword(a,x) or readQword(a)~=x then fail('pointer write/read-back failed') end
+end
+local function restore(s)
+ identity(s);bytewrite(s.cfg,{0})
+ local asserts,writes={},{}
+ for _,p in ipairs(s.sites) do
+  local current=read(p.address,#p.original)
+  if not equal(current,p.original) and not equal(current,p.patched) then fail(p.name..' surrounding code changed; backups retained and native switches set to pass-through') end
+  asserts[#asserts+1]=string.format('assert(%X,%s)',p.address,hex(current))
+  if not equal(current,p.original) then
+   local bytes={};for j=1,5 do bytes[j]=p.original[p.offset+j] end
+   writes[#writes+1]=string.format('%X:\n db %s',p.patch,hex(bytes))
+  end
+ end
+ aa(asserts,writes)
+ for _,p in ipairs(s.sites) do if not equal(read(p.address,#p.original),p.original) then fail('restoration read-back failed') end end
+ if s.registered then unregisterSymbol(symbol);s.registered=false end
+ -- Keep code/config/cache allocated until process exit. A thread may already
+ -- have entered a cave. Re-enabling in the same CE/process reuses this block.
+ s.status='retired'
+end
+local function saveRegisters(frame)
+ local lines={'pushfq','push rax','push rcx','push rdx','push r8','push r9','push r10','push r11',string.format('sub rsp,%X',frame)}
+ for j=0,5 do lines[#lines+1]=string.format('movdqu [rsp+%X],xmm%d',0x20+j*16,j) end
+ return table.concat(lines,'\n')
+end
+local function loadRegisters(frame)
+ local lines={};for j=0,5 do lines[#lines+1]=string.format('movdqu xmm%d,[rsp+%X]',j,0x20+j*16) end
+ lines[#lines+1]=string.format('add rsp,%X',frame)
+ for _,r in ipairs({'r11','r10','r9','r8','rdx','rcx','rax'}) do lines[#lines+1]='pop '..r end
+ lines[#lines+1]='popfq';return table.concat(lines,'\n')
+end
+local function wrapper(p,address,s,index)
+ local prefix='SSO5_h'..index;local mode,fn,arg
+ if p.name=='rider' then mode='force';fn='actor';arg='mov rcx,rsi'
+ elseif p.name=='horse' then mode='force';fn='actor';arg='mov rcx,rsi'
+ elseif p.name=='pet' then mode='force';fn='actor';arg='mov rcx,rbx'
+ elseif p.name=='skinGate' or p.name=='meshGate' then mode='gate';fn='visual';arg='mov rcx,rcx'
+ elseif p.name:sub(1,3)=='lod' then mode='skip';fn='actor';arg='mov rcx,rdi'
+ elseif p.name=='npcAnim' then mode='skip';fn='visual';arg='mov rcx,rcx'
+ elseif p.name:sub(1,4)=='mark' then mode='skip';fn='flag';arg='mov ecx,9'
+ elseif p.name=='collect' then mode='skip';fn='flag';arg='mov ecx,8'
+ elseif p.name=='saleDraw' then mode='skip';fn='flag';arg='mov ecx,7'
+ elseif p.name:find('Text',1,true) then mode='skip';fn='flag';arg='mov ecx,A'
+ else fail('unmapped native hook '..p.name) end
+ local pointer=s.functions[fn];local save,load,lines
+ if mode=='force' or mode=='gate' then
+  save=saveRegisters(0x80);load=loadRegisters(0x80)
+  lines={string.format('label(%s_done)',prefix),string.format('label(%s_return)',prefix),string.format('%X:',address),'sub rsp,28',string.format('call %X',p.target),'test al,al'}
+  lines[#lines+1]=(mode=='force' and 'jnz ' or 'jz ')..prefix..'_return'
+  lines[#lines+1]=save;lines[#lines+1]=arg;lines[#lines+1]=string.format('call qword ptr [%X]',pointer)
+  lines[#lines+1]='test eax,eax';lines[#lines+1]='jz '..prefix..'_done'
+  lines[#lines+1]='mov byte ptr [rsp+B0],'..(mode=='force' and '1' or '0')
+  lines[#lines+1]=prefix..'_done:';lines[#lines+1]=load
+  lines[#lines+1]=prefix..'_return:';lines[#lines+1]='add rsp,28';lines[#lines+1]='ret'
+ else
+  save=saveRegisters(0x88);load=loadRegisters(0x88)
+  lines={string.format('label(%s_pass)',prefix),string.format('%X:',address),save,arg,string.format('call qword ptr [%X]',pointer),'test eax,eax','jz '..prefix..'_pass',load,'ret',prefix..'_pass:',load,string.format('jmp %X',p.target)}
+ end
+ return table.concat(lines,'\n')
+end
+local function run(action)
+ local previous=_G[key]
+ if action=='disable' then
+  if not previous or previous.status=='retired' then return end
+  local ok,err=pcall(restore,previous)
+  if not ok then previous.status='needs_recovery';fail(tostring(err)) end
+  return
+ end
+ if previous and previous.status~='retired' then
+  if previous.status~='needs_recovery' then fail('master is already active; use only one v5 table') end
+  restore(previous)
+ end
+ local i=info();local sites={}
+ if getAddressSafe(symbol) then fail('another table owns the v5 config symbol') end
+ for _,d in ipairs(SITE_DEFINITIONS) do sites[#sites+1]=scan(i,d) end
+ -- Scanning rider/horse/pet includes original nonzero branch distances, so
+ -- active v2/v3/v4 displacement patches are rejected before allocation/writes.
+ local registry=readQword(i.base+0x1379EF0);if not registry or registry==0 then fail('actor registry unavailable') end
+ local begin=readQword(registry);local ending=readQword(registry+8)
+ if not begin or not ending or ending&lt;begin or (ending-begin)%64~=0 or ending-begin&gt;0x10000000 then fail('invalid registry layout') end
+ local count=(ending-begin)//64
+ local function resolve(a)
+  local idx=u32(a+12);if idx&gt;=count or u32(begin+idx*64+44)~=u32(a+8) then return nil end
+  return readQword(begin+idx*64+32)
+ end
+ local player=resolve(i.base+0x1302F28);local horse=player and resolve(player+1608)
+ if not player or player==0 or readQword(player)~=i.base+0xFE4770 or (read(player+144,1)[1]&amp;4)==0 then fail('local player ownership/layout validation failed') end
+ if not horse or horse==0 or readQword(horse)~=i.base+0xF10600 or (read(horse+144,1)[1]&amp;4)==0 then fail('local horse ownership/layout validation failed') end
+ local s
+ if previous and previous.status=='retired' and previous.pid==i.pid and previous.base==i.base and previous.revision==revision then
+  s=previous;s.epoch=s.epoch+1;if s.epoch&gt;65535 then fail('cache epoch exhausted; restart client/CE') end
+ else
+  if type(compile)~='function' then fail('requires Cheat Engine with the built-in x64 C compiler') end
+  local capacity=0x100000;while capacity&lt;count and capacity&lt;0x400000 do capacity=capacity*2 end
+  if count&gt;capacity then fail('registry exceeds classifier capacity') end
+  s={pid=i.pid,base=i.base,size=i.size,stamp=i.stamp,revision=revision,epoch=1,capacity=capacity}
+  s.cfg=allocateMemory(4096);s.cache=allocateMemory(capacity*32);s.code=allocateMemory(65536,i.base)
+  if not s.cfg or not s.cache or not s.code then fail('allocation failed; no game code was patched') end
+  qwrite(s.cfg+64,i.base);qwrite(s.cfg+72,i.base+0x1379EF0);qwrite(s.cfg+80,i.base+0x1302F28);qwrite(s.cfg+88,s.cache)
+  if not writeInteger(s.cfg+96,capacity) then fail('capacity write failed') end
+  local vtables={0xEE4520,0xEE5FE8,0xEE6830,0xEE6BA8,0xFE4770,0xFD10F8,0xF10600,0xF4A868,0xF23958,0xF37BB8,0xF3E8D0,0xF26E20}
+  for j,rva in ipairs(vtables) do qwrite(s.cfg+104+(j-1)*8,i.base+rva) end
+  local called,compiled,err=pcall(compile,string.format('#define CFG_ADDRESS 0x%XULL\n',s.cfg)..NATIVE_C,nil,false,false,true)
+  if not called or not compiled then
+   -- These unpublished buffers cannot have been entered by a game thread.
+   pcall(deAlloc,s.cache,s.capacity*32);pcall(deAlloc,s.code,65536);pcall(deAlloc,s.cfg,4096)
+   fail('native classifier compilation failed: '..tostring(called and err or compiled))
+  end
+  s.functions={}
+  for j,name in ipairs({'actor','visual','flag'}) do
+   local a=compiled['SSO5_'..name];if type(a)~='number' then fail('compiler did not return SSO5_'..name) end
+   s.functions[name]=s.code+0x800+(j-1)*8;qwrite(s.functions[name],a)
+  end
+ end
+ s.status='retired';_G[key]=s
+ bytewrite(s.cfg,{0});if not writeInteger(s.cfg+100,s.epoch) then fail('epoch write failed') end
+ bytewrite(s.cfg+16,{1,1,1,1,1,1,1,1,1,1,1})
+ local zero={};for j=1,88 do zero[j]=0 end;bytewrite(s.cfg+256,zero)
+ local assembly={};local asserts,writes={},{}
+ for j,p in ipairs(sites) do
+  local a=s.code+0x1000+(j-1)*0x800
+  assembly[#assembly+1]=wrapper(p,a,s,j)
+  local displacement=a-(p.patch+5)
+  if displacement &lt; -2147483648 or displacement&gt;2147483647 then fail('code cave is not within near-CALL range; no code patched') end
+  local n=displacement&amp;0xFFFFFFFF;local changed={0xE8,n&amp;255,(n&gt;&gt;8)&amp;255,(n&gt;&gt;16)&amp;255,(n&gt;&gt;24)&amp;255}
+  p.patched={};for k,v in ipairs(p.original) do p.patched[k]=v end
+  for k,v in ipairs(changed) do p.patched[p.offset+k]=v end
+  asserts[#asserts+1]=string.format('assert(%X,%s)',p.address,hex(p.original))
+  writes[#writes+1]=string.format('%X:\n db %s',p.patch,hex(changed))
+ end
+ local ok,err=autoAssemble(table.concat(assembly,'\n'),false)
+ if not ok then fail('wrapper assembly failed (no game sites patched): '..tostring(err)) end
+ s.sites=sites;s.status='enabling';_G[key]=s
+ local applied,why=pcall(function()
+  aa(asserts,writes)
+  for _,p in ipairs(sites) do if not equal(read(p.address,#p.patched),p.patched) then fail(p.name..' enable read-back failed') end end
+  registerSymbol(symbol,s.cfg,true);s.registered=true
+  bytewrite(s.cfg,{1});s.status='active'
+ end)
+ if not applied then
+  s.status='needs_recovery';local undone,why2=pcall(restore,s)
+  if undone then fail(tostring(why)..'; original code restored') end
+  fail(tostring(why)..'; restoration failed: '..tostring(why2)..'. Backups retained; retry master for recovery.')
+ end
+end
+
+run('enable')
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+local NATIVE_C=[==[
+/* Pure classifier for CE's built-in x64 C compiler. No game calls, allocation,
+   object writes or external imports. CFG_ADDRESS is supplied by the loader.
+   All offsets below are guarded to the analyzed 645.348067 executable. */
+typedef unsigned char U8;
+typedef unsigned int U32;
+typedef unsigned long long U64;
+typedef struct {
+    U32 generation,role,parent,root,rootGeneration,rootParent;
+    U64 rootVtable;
+} Cache;
+typedef struct {
+    volatile U8 active;
+    U8 pad[15];
+    volatile U8 hide[11];
+    U8 pad2[37];
+    U64 base, registryAddress, localRefAddress, cacheAddress;
+    U32 capacity, epoch;
+    U64 mesh, skin, particleEx, particle, playerSSO, playerTP, horse, pet;
+    U64 npc, sale, collect, checkpoint;
+    U8 pad3[56];
+    volatile U64 hits[11];
+} Config;
+#ifndef CFG_ADDRESS
+#define CFG_ADDRESS 0
+#endif
+#define C ((Config *)(U64)CFG_ADDRESS)
+static U64 Q(U64 p,U32 o) {return *(volatile U64 *)(p+o);}
+static U32 D(U64 p,U32 o) {return *(volatile U32 *)(p+o);}
+static U8 B(U64 p,U32 o) {return *(volatile U8 *)(p+o);}
+enum { PLAYER_HORSE=1, PLAYER=2, PLAYER_PET=3, NPC_ANIMAL=4,
+       NPC=5, NPC_HORSE=6, STANDALONE=7, SALE=8, COINS=9, MARKER=10,
+       TEXT=11, KEEP=255 };
+
+static U8 lower(U8 c) { return c&gt;='A'&amp;&amp;c&lt;='Z' ? c+32 : c; }
+static int letter(U8 c) { c=lower(c); return c&gt;='a'&amp;&amp;c&lt;='z'; }
+/* Literal, underscore/digit and CamelCase boundaries reduce accidental matches
+   such as Catherine -&gt; cat or SeahorsePoint -&gt; horse. This remains a heuristic. */
+static int word(const char *s,const char *w,int limit) {
+    int i,j; U8 before,first,next,last;
+    for(i=0;i&lt;limit &amp;&amp; s[i];i++) {
+        before=i ? (U8)s[i-1] : 0; first=(U8)s[i];
+        if(i &amp;&amp; letter(before) &amp;&amp; !(before&gt;='a'&amp;&amp;before&lt;='z' &amp;&amp; first&gt;='A'&amp;&amp;first&lt;='Z')) continue;
+        for(j=0;w[j] &amp;&amp; i+j&lt;limit &amp;&amp; s[i+j] &amp;&amp; lower((U8)s[i+j])==(U8)w[j];j++);
+        if(w[j] || i+j&gt;=limit) continue;
+        next=(U8)s[i+j];last=j?(U8)s[i+j-1]:0;
+        if(!letter(next) || (last&gt;='a'&amp;&amp;last&lt;='z' &amp;&amp; next&gt;='A'&amp;&amp;next&lt;='Z')) return 1;
+    }
+    return 0;
+}
+static const char *name(U64 record,int *limit) {
+    U64 ptr;
+    if(B(record,31)) {
+        ptr=Q(record,24)&lt;&lt;1;
+        if(ptr&lt;0x10000 || ptr&gt;=0x0000800000000000ULL) return 0;
+        *limit=96;return (const char *)ptr;
+    }
+    *limit=7;return (const char *)(record+24);
+}
+static U64 resolve(U64 begin,U64 count,U64 ref) {
+    U32 i=D(ref,12); U64 rec;
+    if(i&gt;=count) return 0;
+    rec=begin+((U64)i&lt;&lt;6);
+    return D(rec,44)==D(ref,8) ? Q(rec,32) : 0;
+}
+static U32 npcRole(U64 record) {
+    int n;const char *s=name(record,&amp;n);if(!s)return NPC;
+    /* Known human names containing horse terms must stay in the human bucket. */
+    if(word(s,"trainer",n)||word(s,"shopkeeper",n)||word(s,"girl",n)||word(s,"stylist",n))return NPC;
+    if(word(s,"horse",n)||word(s,"horses",n)||word(s,"pony",n)||word(s,"foal",n)||word(s,"donkey",n)||word(s,"mare",n)||word(s,"stallion",n))return NPC_HORSE;
+    if(word(s,"cat",n)||word(s,"dog",n)||word(s,"rabbit",n)||word(s,"bunny",n)||word(s,"fox",n)||word(s,"hen",n)||word(s,"chicken",n)||word(s,"cow",n)||word(s,"sheep",n)||word(s,"goat",n)||word(s,"pig",n)||word(s,"dove",n)||word(s,"crow",n)||word(s,"magpie",n)||word(s,"owl",n)||word(s,"bird",n)||word(s,"squirrel",n)||word(s,"raccoon",n)||word(s,"duck",n)||word(s,"deer",n)||word(s,"frog",n)||word(s,"seal",n)||word(s,"crab",n)||word(s,"butterfly",n))return NPC_ANIMAL;
+    return NPC;
+}
+/* Positive cache hits still check the root's ancestors for ownership. A
+   higher grouping node can be reparented without changing the mesh or root. */
+static int protectedRoot(U64 begin,U64 count,U32 index) {
+    U32 depth,parent;U64 record,ptr,vt,owner;
+    for(depth=0;depth&lt;32;depth++) {
+        if(index==0x0BADF00D)return 0;
+        if(index&gt;=count)return 1;
+        record=begin+((U64)index&lt;&lt;6);ptr=Q(record,32);
+        if(!ptr||D(ptr,132)!=index||D(ptr,128)!=D(record,44))return 1;
+        vt=Q(ptr,0);
+        if(vt==C-&gt;checkpoint)return 1;
+        if((vt==C-&gt;playerSSO||vt==C-&gt;playerTP||vt==C-&gt;horse||vt==C-&gt;pet)&amp;&amp;(B(ptr,144)&amp;4))return 1;
+        if(vt==C-&gt;horse||vt==C-&gt;pet) {
+            owner=resolve(begin,count,ptr+(vt==C-&gt;horse?152:584));
+            if(owner&amp;&amp;(Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)&amp;&amp;(B(owner,144)&amp;4))return 1;
+        }
+        parent=D(record,40);if(parent==index)return 1;index=parent;
+    }
+    return 1;
+}
+static U32 role(U64 actor) {
+    U64 registry=Q(C-&gt;registryAddress,0),begin,end,count,record,current,ptr,vt,owner;
+    U32 index,generation,candidate=KEEP,typed=0,parent,depth,rootIndex,cacheable=1;
+    Cache *slot=0;
+    if(!registry)return KEEP;
+    begin=Q(registry,0);end=Q(registry,8);
+    if(!begin||end&lt;begin||end-begin&gt;0x10000000ULL||((end-begin)&amp;63))return KEEP;
+    count=(end-begin)&gt;&gt;6;index=D(actor,132);generation=D(actor,128);
+    if(index&gt;=count)return KEEP;
+    record=begin+((U64)index&lt;&lt;6);
+    if(D(record,44)!=generation||Q(record,32)!=actor)return KEEP;
+    if(index&lt;C-&gt;capacity) {
+        slot=(Cache *)(C-&gt;cacheAddress+(U64)index*32);
+        if((slot-&gt;role&gt;&gt;16)==C-&gt;epoch &amp;&amp; slot-&gt;generation==generation &amp;&amp; slot-&gt;parent==D(record,40) &amp;&amp; slot-&gt;root&lt;count) {
+            U64 rr=begin+((U64)slot-&gt;root&lt;&lt;6),rp=Q(rr,32);
+            if(rp &amp;&amp; D(rr,44)==slot-&gt;rootGeneration &amp;&amp; D(rr,40)==slot-&gt;rootParent &amp;&amp; Q(rp,0)==slot-&gt;rootVtable) {
+                U32 cached=slot-&gt;role&amp;65535;
+                return cached==KEEP||!protectedRoot(begin,count,slot-&gt;root)?cached:KEEP;
+            }
+        }
+    }
+    rootIndex=index;
+    current=index;
+    for(depth=0;depth&lt;32;depth++) {
+        if(current&gt;=count){if(current!=0x0BADF00D)return KEEP;break;}
+        record=begin+(current&lt;&lt;6);ptr=Q(record,32);
+        if(!ptr)return KEEP;
+        if(D(ptr,132)!=current||D(ptr,128)!=D(record,44))return KEEP;
+        vt=Q(ptr,0);
+        /* Check ownership even after a category is found in a descendant. */
+        if(vt==C-&gt;playerSSO||vt==C-&gt;playerTP) {
+            cacheable=0;
+            if(B(ptr,144)&amp;4){candidate=KEEP;break;}
+            if(!typed){candidate=PLAYER;typed=1;}
+        } else if(vt==C-&gt;horse) {
+            cacheable=0;
+            owner=resolve(begin,count,ptr+152);
+            if((B(ptr,144)&amp;4)||(owner &amp;&amp; (Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP) &amp;&amp; (B(owner,144)&amp;4))){candidate=KEEP;break;}
+            if(!typed){candidate=!owner?STANDALONE:((Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)?PLAYER_HORSE:NPC_HORSE);typed=1;}
+        } else if(vt==C-&gt;pet) {
+            cacheable=0;
+            owner=resolve(begin,count,ptr+584);
+            if((B(ptr,144)&amp;4)||(owner &amp;&amp; (Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP) &amp;&amp; (B(owner,144)&amp;4))){candidate=KEEP;break;}
+            if(!typed){candidate=owner&amp;&amp;(Q(owner,0)==C-&gt;playerSSO||Q(owner,0)==C-&gt;playerTP)?PLAYER_PET:NPC_ANIMAL;typed=1;}
+        } else if(vt==C-&gt;checkpoint) {
+            cacheable=0;candidate=KEEP;break;
+        } else if(vt==C-&gt;npc &amp;&amp; !typed) {
+            if(candidate!=MARKER)candidate=npcRole(record);typed=1;rootIndex=(U32)current;
+        } else if(vt==C-&gt;sale &amp;&amp; !typed) {
+            candidate=SALE;typed=1;rootIndex=(U32)current;
+        } else if(vt==C-&gt;collect &amp;&amp; !typed) {
+            candidate=COINS;typed=1;rootIndex=(U32)current;
+        } else if(!typed) {
+            int n;const char *s=name(record,&amp;n);
+            if(s) {
+                if(word(s,"coin",n)||word(s,"coins",n)||word(s,"shilling",n)||word(s,"shillings",n)){candidate=COINS;rootIndex=(U32)current;}
+                if(word(s,"exclamation",n)||word(s,"question",n)||word(s,"questionmark",n)||word(s,"exclamationmark",n)){candidate=MARKER;rootIndex=(U32)current;}
+            }
+        }
+        parent=D(record,40);if(parent==current)return KEEP;current=parent;
+    }
+    if(depth==32)return KEEP;
+    if(slot &amp;&amp; cacheable){
+        U64 rr=begin+((U64)rootIndex&lt;&lt;6),rp=Q(rr,32);
+        slot-&gt;role=0;slot-&gt;generation=generation;slot-&gt;parent=D(begin+((U64)index&lt;&lt;6),40);
+        slot-&gt;root=rootIndex;slot-&gt;rootGeneration=D(rr,44);slot-&gt;rootParent=D(rr,40);slot-&gt;rootVtable=rp?Q(rp,0):0;
+        slot-&gt;role=(C-&gt;epoch&lt;&lt;16)|candidate;
+    }
+    return candidate;
+}
+static int hideRole(U32 r) {
+    if(r&gt;=1 &amp;&amp; r&lt;=11 &amp;&amp; C-&gt;hide[r-1]==1){C-&gt;hits[r-1]++;return 1;}return 0;
+}
+int SSO5_actor(U64 actor) {return C-&gt;active &amp;&amp; actor ? hideRole(role(actor)) : 0;}
+int SSO5_visual(U64 actor) {
+    U64 vt;
+    if(!C-&gt;active || !actor)return 0;
+    vt=Q(actor,0);
+    if(vt!=C-&gt;mesh &amp;&amp; vt!=C-&gt;skin &amp;&amp; vt!=C-&gt;particleEx &amp;&amp; vt!=C-&gt;particle)return 0;
+    return hideRole(role(actor));
+}
+int SSO5_flag(U32 index) {
+    if(!C-&gt;active||index&gt;=11||C-&gt;hide[index]!=1)return 0;
+    C-&gt;hits[index]++;return 1;
+}
+/* Kept as exports to let the isolated harness verify the real compiled layout. */
+int SSO5_sizeof_config(void) {return sizeof(Config);}
+int SSO5_offset_hits(void) {return (int)((U64)&amp;C-&gt;hits-(U64)C);}
+
+]==]
+local SITE_DEFINITIONS={
+{name='rider',pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 7F 33 D2 48 8B CE E8 3E C4 93 FF 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 FC D3 93 FF F3 0F 10 B6 4C 01 00 00',patch_offset=3,target_rva=0x799ad0},
+{name='horse',pattern='4C 8D BE E8 0A 00 00 E8 ?? ?? ?? ?? 84 C0 74 58 33 D2 48 8B CE E8 61 E8 EE FF 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 1F F8 EE FF F3 41 0F 10',patch_offset=7,target_rva=0x1e6f50},
+{name='pet',pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 F8 01 00 00 0F 57 F6 84 C0 74 0A F3 0F 5C D7 F3 0F 5F D6 EB 0C F3 0F 58 D7 F3 0F 5D 93 FC 01 00 00',patch_offset=6,target_rva=0x799ad0},
+{name='lod1',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 45 0F 58 CA 45 0F 2F C1 E9 DE',patch_offset=10,target_rva=0x69e540},
+{name='lod2',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 44 0F 10 A5 A8 01 00 00 E9 A4',patch_offset=10,target_rva=0x69e540},
+{name='lod3',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 58 FA 44 0F 2F C7 0F 87 FF',patch_offset=10,target_rva=0x69e540},
+{name='lod4',pattern='48 8B 97 70 01 00 00 48 8B CE E8 ?? ?? ?? ?? EB 33 E8 44 BF 36 00 4C 8B F0 48 85',patch_offset=10,target_rva=0x69e540},
+{name='mark1',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 85 FF 0F 84 3F 01 00 00 83 3D DD A5 06 01 00 0F 84',patch_offset=18,target_rva=0x69ebc0},
+{name='mark2',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? 48 8B 05 C3 68 0E 01 48 85 C0 74 49 F6 83 A0 03 00 00',patch_offset=18,target_rva=0x69ebc0},
+{name='mark3',pattern='48 8D 83 48 02 00 00 48 89 45 A8 48 8D 55 A0 48 8B CF E8 ?? ?? ?? ?? EB 03 45 32 E4 48 85 F6 74 29 4C 8B 36 E8 18 BB E6',patch_offset=18,target_rva=0x69ebc0},
+{name='collect',pattern='48 89 45 E8 49 8B CF F3 0F 7F 45 F0 F3 0F 7F 4D 08 E8 ?? ?? ?? ?? 44 0F B6 A7 2C 01 00 00 49 8B CE 48 89 B4 24 C8',patch_offset=17,target_rva=0x69ebc0},
+{name='saleDraw',pattern='F3 44 0F 11 5D B7 48 8D 55 97 49 8B CC E8 ?? ?? ?? ?? 48 8D 8F F0 00 00 00 E8 02 7F 2C 00 48 8B D8',patch_offset=13,target_rva=0x69ebc0},
+{name='npcAnim',pattern='F3 0F 59 C6 F3 41 0F 59 C4 0F 28 C8 49 8B CE E8 ?? ?? ?? ?? 49 8B CF E8 36 46 39 00 48 85 C0 0F 84 B3 00 00 00',patch_offset=15,target_rva=0xfcf00},
+{name='charText0x28d49c',pattern='E8 ?? ?? ?? ?? EB 04 45 0F 57 FF 48 8B 07 48 8B CF FF 90 B8 03 00 00 85',patch_offset=0,target_rva=0x6a1d20},
+{name='charText0x28d74e',pattern='E8 ?? ?? ?? ?? 4C 8B C6 49 8B D7 48 8B CF E8 DF 88 E4 FF 90 48 8B 8D A8',patch_offset=0,target_rva=0x6a1d20},
+{name='questText0x296646',pattern='E8 ?? ?? ?? ?? EB 1B 48 85 F6 74 16 48 8B 1E E8 C6 B4 E6 FF 4C 8B C0 33',patch_offset=0,target_rva=0x6a1d20},
+{name='skinGate',pattern='F6 81 5C 03 00 00 20 0F 85 FF 03 00 00 E8 ?? ?? ?? ?? 84 C0 0F 84 E4 03 00 00 4D 8D B7 28 01 00 00 49 83 3E 00 0F 84',patch_offset=13,target_rva=0xcf220},
+{name='meshGate',pattern='0F 84 F5 01 00 00 48 8B CF E8 ?? ?? ?? ?? 84 C0 0F 84 E5 01 00 00 4C 8B B7 B0 00 00 00 4C 89 75 A0 48 8B',patch_offset=9,target_rva=0xcf220},
+}
+-- The generator inserts NATIVE_C and SITE_DEFINITIONS above this loader.
+-- All activation is performed by the user's single AA entry. No autorun Lua.
+local key='SSOVisibilityCategoriesV5'
+local symbol='SSO5_CONFIG'
+local revision='v5-48d3709bc62137f254ff'
+local function fail(s) error('SSO categories v5: '..s,0) end
+local function read(a,n)
+ local b=readBytes(a,n,true);if not b or #b~=n then fail(string.format('read failed at %X',a)) end;return b
+end
+local function equal(a,b)
+ if not a or not b or #a~=#b then return false end
+ for i=1,#a do if a[i]~=b[i] then return false end end;return true
+end
+local function hex(b)
+ local s={};for i,v in ipairs(b) do s[i]=string.format('%02X',v) end;return table.concat(s,' ')
+end
+local function u32(a)local b=read(a,4);return b[1]+b[2]*256+b[3]*65536+b[4]*16777216 end
+local function i32(a)local x=u32(a);return x&gt;=2147483648 and x-4294967296 or x end
+local function info()
+ local base=getAddressSafe('SSOClient.exe');if not base then fail('select SSOClient.exe first') end
+ if not equal(read(base,2),{0x4D,0x5A}) then fail('invalid module') end
+ local pe=base+u32(base+0x3C)
+ if not equal(read(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires AMD64 PE') end
+ local stamp=u32(pe+8);local size=u32(pe+24+56)
+ -- New classifier layouts are baseline-specific, unlike v4's three-byte patch.
+ if stamp~=0x6AEB5BD3 or size~=0x014AF000 then fail('this object-layout version is for client 645.348067. Update review required; v4 remains separate.') end
+ local n=read(pe+6,2);n=n[1]+256*n[2];if n&lt;1 or n&gt;96 then fail('invalid section count') end
+ local os=read(pe+20,2);os=os[1]+256*os[2];local sections={}
+ for i=0,n-1 do
+  local h=pe+24+os+i*40
+  if (u32(h+36)&amp;0x20000000)~=0 then
+   local a=base+u32(h+12);local z=math.max(u32(h+8),u32(h+16))
+   if a&lt;base or a+z&gt;base+size then fail('bad executable section') end
+   sections[#sections+1]={a,a+z}
+  end
+ end
+ return {base=base,stamp=stamp,size=size,pid=getOpenedProcessID(),sections=sections}
+end
+local function code(i,a,n)
+ for _,s in ipairs(i.sections) do if a&gt;=s[1] and a+n&lt;=s[2] then return true end end;return false
+end
+local function matches(b,pattern)
+ local n=0;for p in pattern:gmatch('%S+') do n=n+1;if p~='??' and b[n]~=tonumber(p,16) then return false end end
+ return n==#b
+end
+local function scan(i,d)
+ local n=0;for _ in d.pattern:gmatch('%S+') do n=n+1 end
+ local list=AOBScan(d.pattern,'+X',0,'1');local hits={}
+ if list then
+  local ok,err=pcall(function()for j=0,list.Count-1 do local a=tonumber(list[j],16);if a and code(i,a,n) then hits[#hits+1]=a end end end)
+  list.destroy();if not ok then fail(tostring(err)) end
+ end
+ if #hits~=1 then fail(d.name..' has '..#hits..' executable-module matches; expected one. Disable older tables or review this build.') end
+ local at=hits[1];local original=read(at,n);if not matches(original,d.pattern) then fail('code changed during scan') end
+ local patch=at+d.patch_offset
+ if read(patch,1)[1]~=0xE8 then fail(d.name..' is not a near CALL') end
+ local target=patch+5+i32(patch+1)
+ if target~=i.base+d.target_rva or not code(i,target,1) then fail(d.name..' helper relationship changed') end
+ return {name=d.name,address=at,patch=patch,target=target,original=original,offset=d.patch_offset}
+end
+local function identity(s)
+ local i=info();if i.pid~=s.pid or i.base~=s.base or i.stamp~=s.stamp or i.size~=s.size then fail('selected process/image changed; do not restore saved addresses into a restarted client') end;return i
+end
+local function aa(asserts,writes)
+ if #writes==0 then return end
+ local ok,why=autoAssemble(table.concat(asserts,'\n')..'\n'..table.concat(writes,'\n'),false)
+ if not ok then fail('Auto Assembler failed: '..tostring(why)) end
+end
+local function bytewrite(a,values)
+ if not writeBytes(a,values) or not equal(read(a,#values),values) then fail('data write/read-back failed') end
+end
+local function qwrite(a,x)
+ if not writeQword(a,x) or readQword(a)~=x then fail('pointer write/read-back failed') end
+end
+local function restore(s)
+ identity(s);bytewrite(s.cfg,{0})
+ local asserts,writes={},{}
+ for _,p in ipairs(s.sites) do
+  local current=read(p.address,#p.original)
+  if not equal(current,p.original) and not equal(current,p.patched) then fail(p.name..' surrounding code changed; backups retained and native switches set to pass-through') end
+  asserts[#asserts+1]=string.format('assert(%X,%s)',p.address,hex(current))
+  if not equal(current,p.original) then
+   local bytes={};for j=1,5 do bytes[j]=p.original[p.offset+j] end
+   writes[#writes+1]=string.format('%X:\n db %s',p.patch,hex(bytes))
+  end
+ end
+ aa(asserts,writes)
+ for _,p in ipairs(s.sites) do if not equal(read(p.address,#p.original),p.original) then fail('restoration read-back failed') end end
+ if s.registered then unregisterSymbol(symbol);s.registered=false end
+ -- Keep code/config/cache allocated until process exit. A thread may already
+ -- have entered a cave. Re-enabling in the same CE/process reuses this block.
+ s.status='retired'
+end
+local function saveRegisters(frame)
+ local lines={'pushfq','push rax','push rcx','push rdx','push r8','push r9','push r10','push r11',string.format('sub rsp,%X',frame)}
+ for j=0,5 do lines[#lines+1]=string.format('movdqu [rsp+%X],xmm%d',0x20+j*16,j) end
+ return table.concat(lines,'\n')
+end
+local function loadRegisters(frame)
+ local lines={};for j=0,5 do lines[#lines+1]=string.format('movdqu xmm%d,[rsp+%X]',j,0x20+j*16) end
+ lines[#lines+1]=string.format('add rsp,%X',frame)
+ for _,r in ipairs({'r11','r10','r9','r8','rdx','rcx','rax'}) do lines[#lines+1]='pop '..r end
+ lines[#lines+1]='popfq';return table.concat(lines,'\n')
+end
+local function wrapper(p,address,s,index)
+ local prefix='SSO5_h'..index;local mode,fn,arg
+ if p.name=='rider' then mode='force';fn='actor';arg='mov rcx,rsi'
+ elseif p.name=='horse' then mode='force';fn='actor';arg='mov rcx,rsi'
+ elseif p.name=='pet' then mode='force';fn='actor';arg='mov rcx,rbx'
+ elseif p.name=='skinGate' or p.name=='meshGate' then mode='gate';fn='visual';arg='mov rcx,rcx'
+ elseif p.name:sub(1,3)=='lod' then mode='skip';fn='actor';arg='mov rcx,rdi'
+ elseif p.name=='npcAnim' then mode='skip';fn='visual';arg='mov rcx,rcx'
+ elseif p.name:sub(1,4)=='mark' then mode='skip';fn='flag';arg='mov ecx,9'
+ elseif p.name=='collect' then mode='skip';fn='flag';arg='mov ecx,8'
+ elseif p.name=='saleDraw' then mode='skip';fn='flag';arg='mov ecx,7'
+ elseif p.name:find('Text',1,true) then mode='skip';fn='flag';arg='mov ecx,A'
+ else fail('unmapped native hook '..p.name) end
+ local pointer=s.functions[fn];local save,load,lines
+ if mode=='force' or mode=='gate' then
+  save=saveRegisters(0x80);load=loadRegisters(0x80)
+  lines={string.format('label(%s_done)',prefix),string.format('label(%s_return)',prefix),string.format('%X:',address),'sub rsp,28',string.format('call %X',p.target),'test al,al'}
+  lines[#lines+1]=(mode=='force' and 'jnz ' or 'jz ')..prefix..'_return'
+  lines[#lines+1]=save;lines[#lines+1]=arg;lines[#lines+1]=string.format('call qword ptr [%X]',pointer)
+  lines[#lines+1]='test eax,eax';lines[#lines+1]='jz '..prefix..'_done'
+  lines[#lines+1]='mov byte ptr [rsp+B0],'..(mode=='force' and '1' or '0')
+  lines[#lines+1]=prefix..'_done:';lines[#lines+1]=load
+  lines[#lines+1]=prefix..'_return:';lines[#lines+1]='add rsp,28';lines[#lines+1]='ret'
+ else
+  save=saveRegisters(0x88);load=loadRegisters(0x88)
+  lines={string.format('label(%s_pass)',prefix),string.format('%X:',address),save,arg,string.format('call qword ptr [%X]',pointer),'test eax,eax','jz '..prefix..'_pass',load,'ret',prefix..'_pass:',load,string.format('jmp %X',p.target)}
+ end
+ return table.concat(lines,'\n')
+end
+local function run(action)
+ local previous=_G[key]
+ if action=='disable' then
+  if not previous or previous.status=='retired' then return end
+  local ok,err=pcall(restore,previous)
+  if not ok then previous.status='needs_recovery';fail(tostring(err)) end
+  return
+ end
+ if previous and previous.status~='retired' then
+  if previous.status~='needs_recovery' then fail('master is already active; use only one v5 table') end
+  restore(previous)
+ end
+ local i=info();local sites={}
+ if getAddressSafe(symbol) then fail('another table owns the v5 config symbol') end
+ for _,d in ipairs(SITE_DEFINITIONS) do sites[#sites+1]=scan(i,d) end
+ -- Scanning rider/horse/pet includes original nonzero branch distances, so
+ -- active v2/v3/v4 displacement patches are rejected before allocation/writes.
+ local registry=readQword(i.base+0x1379EF0);if not registry or registry==0 then fail('actor registry unavailable') end
+ local begin=readQword(registry);local ending=readQword(registry+8)
+ if not begin or not ending or ending&lt;begin or (ending-begin)%64~=0 or ending-begin&gt;0x10000000 then fail('invalid registry layout') end
+ local count=(ending-begin)//64
+ local function resolve(a)
+  local idx=u32(a+12);if idx&gt;=count or u32(begin+idx*64+44)~=u32(a+8) then return nil end
+  return readQword(begin+idx*64+32)
+ end
+ local player=resolve(i.base+0x1302F28);local horse=player and resolve(player+1608)
+ if not player or player==0 or readQword(player)~=i.base+0xFE4770 or (read(player+144,1)[1]&amp;4)==0 then fail('local player ownership/layout validation failed') end
+ if not horse or horse==0 or readQword(horse)~=i.base+0xF10600 or (read(horse+144,1)[1]&amp;4)==0 then fail('local horse ownership/layout validation failed') end
+ local s
+ if previous and previous.status=='retired' and previous.pid==i.pid and previous.base==i.base and previous.revision==revision then
+  s=previous;s.epoch=s.epoch+1;if s.epoch&gt;65535 then fail('cache epoch exhausted; restart client/CE') end
+ else
+  if type(compile)~='function' then fail('requires Cheat Engine with the built-in x64 C compiler') end
+  local capacity=0x100000;while capacity&lt;count and capacity&lt;0x400000 do capacity=capacity*2 end
+  if count&gt;capacity then fail('registry exceeds classifier capacity') end
+  s={pid=i.pid,base=i.base,size=i.size,stamp=i.stamp,revision=revision,epoch=1,capacity=capacity}
+  s.cfg=allocateMemory(4096);s.cache=allocateMemory(capacity*32);s.code=allocateMemory(65536,i.base)
+  if not s.cfg or not s.cache or not s.code then fail('allocation failed; no game code was patched') end
+  qwrite(s.cfg+64,i.base);qwrite(s.cfg+72,i.base+0x1379EF0);qwrite(s.cfg+80,i.base+0x1302F28);qwrite(s.cfg+88,s.cache)
+  if not writeInteger(s.cfg+96,capacity) then fail('capacity write failed') end
+  local vtables={0xEE4520,0xEE5FE8,0xEE6830,0xEE6BA8,0xFE4770,0xFD10F8,0xF10600,0xF4A868,0xF23958,0xF37BB8,0xF3E8D0,0xF26E20}
+  for j,rva in ipairs(vtables) do qwrite(s.cfg+104+(j-1)*8,i.base+rva) end
+  local called,compiled,err=pcall(compile,string.format('#define CFG_ADDRESS 0x%XULL\n',s.cfg)..NATIVE_C,nil,false,false,true)
+  if not called or not compiled then
+   -- These unpublished buffers cannot have been entered by a game thread.
+   pcall(deAlloc,s.cache,s.capacity*32);pcall(deAlloc,s.code,65536);pcall(deAlloc,s.cfg,4096)
+   fail('native classifier compilation failed: '..tostring(called and err or compiled))
+  end
+  s.functions={}
+  for j,name in ipairs({'actor','visual','flag'}) do
+   local a=compiled['SSO5_'..name];if type(a)~='number' then fail('compiler did not return SSO5_'..name) end
+   s.functions[name]=s.code+0x800+(j-1)*8;qwrite(s.functions[name],a)
+  end
+ end
+ s.status='retired';_G[key]=s
+ bytewrite(s.cfg,{0});if not writeInteger(s.cfg+100,s.epoch) then fail('epoch write failed') end
+ bytewrite(s.cfg+16,{1,1,1,1,1,1,1,1,1,1,1})
+ local zero={};for j=1,88 do zero[j]=0 end;bytewrite(s.cfg+256,zero)
+ local assembly={};local asserts,writes={},{}
+ for j,p in ipairs(sites) do
+  local a=s.code+0x1000+(j-1)*0x800
+  assembly[#assembly+1]=wrapper(p,a,s,j)
+  local displacement=a-(p.patch+5)
+  if displacement &lt; -2147483648 or displacement&gt;2147483647 then fail('code cave is not within near-CALL range; no code patched') end
+  local n=displacement&amp;0xFFFFFFFF;local changed={0xE8,n&amp;255,(n&gt;&gt;8)&amp;255,(n&gt;&gt;16)&amp;255,(n&gt;&gt;24)&amp;255}
+  p.patched={};for k,v in ipairs(p.original) do p.patched[k]=v end
+  for k,v in ipairs(changed) do p.patched[p.offset+k]=v end
+  asserts[#asserts+1]=string.format('assert(%X,%s)',p.address,hex(p.original))
+  writes[#writes+1]=string.format('%X:\n db %s',p.patch,hex(changed))
+ end
+ local ok,err=autoAssemble(table.concat(assembly,'\n'),false)
+ if not ok then fail('wrapper assembly failed (no game sites patched): '..tostring(err)) end
+ s.sites=sites;s.status='enabling';_G[key]=s
+ local applied,why=pcall(function()
+  aa(asserts,writes)
+  for _,p in ipairs(sites) do if not equal(read(p.address,#p.patched),p.patched) then fail(p.name..' enable read-back failed') end end
+  registerSymbol(symbol,s.cfg,true);s.registered=true
+  bytewrite(s.cfg,{1});s.status='active'
+ end)
+ if not applied then
+  s.status='needs_recovery';local undone,why2=pcall(restore,s)
+  if undone then fail(tostring(why)..'; original code restored') end
+  fail(tostring(why)..'; restoration failed: '..tostring(why2)..'. Backups retained; retry master for recovery.')
+ end
+end
+
+run('disable')
+{$asm}
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>100</ID>
+          <Description>"Other players: horses"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+10</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>200</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+100</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>101</ID>
+          <Description>"Other players: characters"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+11</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>201</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+108</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>102</ID>
+          <Description>"Other players: pets"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+12</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>202</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+110</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>103</ID>
+          <Description>"NPC pets / ambient animals (name based)"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+13</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>203</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+118</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>104</ID>
+          <Description>"NPC actors (fallback for unclassified NPCs)"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+14</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>204</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+120</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>105</ID>
+          <Description>"NPC horses (name based)"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+15</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>205</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+128</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>106</ID>
+          <Description>"Standalone riderless CPXHorse objects"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+16</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>206</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+130</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>107</ID>
+          <Description>"Buyable / display horses"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+17</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>207</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+138</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>108</ID>
+          <Description>"Coins / collectible visuals"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+18</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>208</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+140</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>109</ID>
+          <Description>"Quest ? / ! markers"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+19</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>209</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+148</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>110</ID>
+          <Description>"NPC floating text / speech bubbles"</Description>
+          <VariableType>Byte</VariableType>
+          <Address>SSO5_CONFIG+1A</Address>
+          <DropDownList ReadOnly="1" DescriptionOnly="0" DisplayValueAsItem="1">0:Normal
+1:Hide</DropDownList>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>210</ID>
+              <Description>"Native hide decisions (calls, not actor count)"</Description>
+              <VariableType>8 Bytes</VariableType>
+              <Address>SSO5_CONFIG+150</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols />
+</CheatTable>

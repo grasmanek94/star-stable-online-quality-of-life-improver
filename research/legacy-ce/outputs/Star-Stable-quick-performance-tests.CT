@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"TRY: native hide horses/riders preferences (visual effect unverified)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// EXPERIMENTAL native hide-player preference test; visual effect/scope unverified.
+// Only four data bytes are changed. No IgnoreList/chat/network API calls.
+// Uncheck before closing this table or changing graphics settings/logging out.
+// Build: 645.348067. May be consumed by game scripts only after a refresh.
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+local key='SSO645_native_visibility'
+if _G[key] then error('This visibility entry is already enabled') end
+local base=getAddressSafe('SSOClient.exe')
+if not base then error('Select SSOClient.exe first') end
+local function same(a,b)
+  if not a or #a~=#b then return false end
+  for i=1,#a do if a[i]~=b[i] then return false end end
+  return true
+end
+if not same(readBytes(base+0x178,4,true),{211,91,235,106}) or
+   not same(readBytes(base+0x1C0,4,true),{0,240,74,1}) or
+   not same(readBytes(base+0xFA7840,20,true),{71,114,97,112,104,105,99,115,72,105,100,101,80,108,97,121,101,114,115,0}) then
+  error('Build guard failed: requires unmodified SSOClient 645.348067')
+end
+local studio=readQword(base+0x13794C8)
+if not studio or studio==0 or readQword(studio)~=base+0xFA53D8 then
+  error('Studio pointer/vtable check failed; enter the game first')
+end
+local settings=readQword(studio+0x2B8)
+if not settings or settings==0 then error('Settings pointer is unavailable') end
+local address=settings+0xAA
+local original=readBytes(address,4,true)
+if not original or #original~=4 then error('Cannot read visibility flags') end
+for i=1,4 do if original[i]~=0 and original[i]~=1 then error('Visibility values are not Boolean; refusing write') end end
+local desired={1,1,1,1}
+local ok=pcall(writeBytes,address,desired)
+if not ok or not same(readBytes(address,4,true),desired) then
+  pcall(writeBytes,address,original)
+  error('Could not set visibility preferences; attempted to restore saved values')
+end
+_G[key]={pid=getOpenedProcessID(),base=base,studio=studio,settings=settings,original=original}
+{$asm}
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+local key='SSO645_native_visibility'
+local state=_G[key]
+if not state then return end
+-- Never write to the old object if the process or settings block was recreated.
+if getOpenedProcessID()~=state.pid or getAddressSafe('SSOClient.exe')~=state.base then
+  error('Select the original SSOClient.exe process before disabling this entry; saved values retained')
+end
+local studio=readQword(state.base+0x13794C8)
+if studio~=state.studio or not studio or readQword(studio)~=state.base+0xFA53D8 or
+   readQword(studio+0x2B8)~=state.settings then
+  _G[key]=nil
+  return
+end
+local current=readBytes(state.settings+0xAA,4,true)
+if not current or #current~=4 then error('Cannot read original settings block; restart the game to reload preferences') end
+for i=1,4 do if current[i]~=0 and current[i]~=1 then error('Settings data changed unexpectedly; refusing restoration') end end
+writeBytes(state.settings+0xAA,state.original)
+local restored=readBytes(state.settings+0xAA,4,true)
+for i=1,4 do if not restored or restored[i]~=state.original[i] then error('Restoration failed; keep the table open and retry') end end
+_G[key]=nil
+{$asm}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"DIAGNOSTIC: freeze procedural MatrixAnimation (world objects may stop)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// Diagnostic: freeze procedural CPXMatrixAnimation step globally.
+// Child traversal remains active. Animated world objects can stop moving.
+// No live-game crash guarantee; build 645.348067 only.
+define(MatrixTickGate,SSOClient.exe+000DA668)
+
+[ENABLE]
+assert(SSOClient.exe+00000178,d3 5b eb 6a)
+assert(SSOClient.exe+000001C0,00 f0 4a 01)
+assert(SSOClient.exe+000DA65F,74 1f e8 ba 4b ff ff 84 c0 74 08 48 8b cb e8 6e 33 00 00 4c 8b c7 48 8b d6 48 8b cb e8 10 8d fd ff 48 8b 5c 24 30 48 8b)
+MatrixTickGate:
+  db EB
+
+[DISABLE]
+assert(SSOClient.exe+00000178,d3 5b eb 6a)
+assert(SSOClient.exe+000001C0,00 f0 4a 01)
+assert(SSOClient.exe+000DA65F,74 1f e8 ba 4b ff ff 84 c0 eb 08 48 8b cb e8 6e 33 00 00 4c 8b c7 48 8b d6 48 8b cb e8 10 8d fd ff 48 8b 5c 24 30 48 8b)
+MatrixTickGate:
+  db 74
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"TEST: skip both sampler touch loops (previous experiment)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// EXPERIMENTAL performance A/B patch; no live-game crash guarantee.
+// SSOClient.exe 645.348067 / Stellar 645 only.
+// SHA256: 3CEC805521C70B64F1A33C5A0EFA67679B8112DACBE9594AB1B47301B4D3DE8D
+// Offline differential emulation: 630 input cases matched.
+// ENABLE: one-byte JZ -&gt; JMP per selected loop; DISABLE restores JZ.
+// The key searches, interpolation, guards and function prologues remain intact.
+// All addresses are module-relative, so ASLR is supported.
+
+define(QuatTouchGate,SSOClient.exe+006842A4)
+define(VectorTouchGate,SSOClient.exe+00684A06)
+
+[ENABLE]
+assert(SSOClient.exe+00000178,D3 5B EB 6A)
+assert(SSOClient.exe+000001C0,00 F0 4A 01)
+assert(SSOClient.exe+006842A1,45 85 C9 74 29 66 66 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 8D 04 80 0F 10 04 83 8B 44 83 10 89 44 24 40 0F 11 44 24 30 41 3B C9 72 E1 48 8B)
+assert(SSOClient.exe+00684A03,45 85 C9 74 1E 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 03 C0 0F 10 04 C3 0F 11 44 24 28 41 3B C9 72 EA 48 8B 54 24 20 0F 28 D6 48 8B CB E8 DA)
+
+QuatTouchGate:
+  db EB
+VectorTouchGate:
+  db EB
+
+[DISABLE]
+assert(SSOClient.exe+00000178,D3 5B EB 6A)
+assert(SSOClient.exe+000001C0,00 F0 4A 01)
+assert(SSOClient.exe+006842A1,45 85 C9 EB 29 66 66 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 8D 04 80 0F 10 04 83 8B 44 83 10 89 44 24 40 0F 11 44 24 30 41 3B C9 72 E1 48 8B)
+assert(SSOClient.exe+00684A03,45 85 C9 EB 1E 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 03 C0 0F 10 04 C3 0F 11 44 24 28 41 3B C9 72 EA 48 8B 54 24 20 0F 28 D6 48 8B CB E8 DA)
+
+QuatTouchGate:
+  db 74
+VectorTouchGate:
+  db 74
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols />
+</CheatTable>

@@ -1,0 +1,944 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"AOB v4: hide other horses + riders"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// Update-tolerant AOB visibility patch; future semantic changes still require review.
+// Exact-match count + branch/helper validation + dynamic original-byte restoration.
+// Disable earlier visibility tables first; keep CE open until restoration.
+
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+-- Embedded in each AA entry; only runs when the user toggles that entry.
+-- No fixed patch RVAs, build timestamps, heap pointers or original branch distances.
+local moduleName='SSOClient.exe'
+local statePrefix='SSOVisibilityAOB4_'
+local definitions={
+  rider={name='rider',symbol='SSOHideAOB4_Rider',branch=10,call=3,getter=17,setter=35,
+    pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 ?? ?? ?? ?? F3 0F 10 B6 ?? ?? ?? ??',
+    normal='83 FF 04'},
+  horse={name='horse',symbol='SSOHideAOB4_Horse',branch=14,call=7,getter=21,setter=39,
+    pattern='4C 8D BE ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 10 0F',
+    normal='83 FB 04'},
+  pet={name='pet',symbol='SSOHideAOB4_Pet',branch=24,call=6,
+    pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 ?? ?? ?? ?? 0F 57 F6 84 C0 74 ?? F3 0F 5C D7 F3 0F 5F D6 EB ?? F3 0F 58 D7 F3 0F 5D 93 ?? ?? ?? ??',
+    normal='F3 0F 58 D7'}
+}
+local horseWrapper='48 83 EC 28 48 81 C1 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 ?? 48 8B C8 48 83 C4 28 E9 ?? ?? ?? ?? B0 01 48 83 C4 28 C3'
+
+local function fail(message) error('SSO visibility AOB v4: '..message,0) end
+local function bytes(address,count)
+  local value=readBytes(address,count,true)
+  if not value or #value~=count then fail('cannot read '..string.format('%X',address)) end
+  return value
+end
+local function same(a,b)
+  if not a or not b or #a~=#b then return false end
+  for i=1,#a do if a[i]~=b[i] then return false end end
+  return true
+end
+local function hex(value)
+  local result={};for i=1,#value do result[i]=string.format('%02X',value[i]) end
+  return table.concat(result,' ')
+end
+local function tokens(pattern)
+  local result={};for part in pattern:gmatch('%S+') do result[#result+1]=part end
+  return result
+end
+local function matches(value,pattern)
+  local p=tokens(pattern);if #value~=#p then return false end
+  for i=1,#p do if p[i]~='??' and value[i]~=tonumber(p[i],16) then return false end end
+  return true
+end
+local function u32(address)
+  local b=bytes(address,4);return b[1]+256*b[2]+65536*b[3]+16777216*b[4]
+end
+local function signed32(address)
+  local n=u32(address);if n&gt;=2147483648 then n=n-4294967296 end;return n
+end
+local function moduleInfo()
+  local base=getAddressSafe(moduleName)
+  if not base then fail('select SSOClient.exe first') end
+  if not same(bytes(base,2),{0x4D,0x5A}) then fail('invalid PE header') end
+  local pe=base+u32(base+0x3C)
+  if not same(bytes(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires a 64-bit Windows client') end
+  local count=bytes(pe+6,2);count=count[1]+256*count[2]
+  local optional=pe+24
+  if not same(bytes(optional,2),{0x0B,0x02}) then fail('expected PE32+ image') end
+  local size=u32(optional+56)
+  if size&lt;0x10000 or size&gt;0x40000000 or count&lt;1 or count&gt;96 then fail('invalid image layout') end
+  local osize=bytes(pe+20,2);osize=osize[1]+256*osize[2]
+  local sections={}
+  for i=0,count-1 do
+    local h=optional+osize+40*i
+    if (u32(h+36)&amp;0x20000000)~=0 then
+      local start=base+u32(h+12)
+      local length=math.max(u32(h+8),u32(h+16))
+      if start&lt;base or length&lt;=0 or start+length&gt;base+size then fail('invalid executable section') end
+      sections[#sections+1]={start,start+length}
+    end
+  end
+  if #sections==0 then fail('no executable sections') end
+  return {base=base,size=size,stamp=u32(pe+8),pid=getOpenedProcessID(),sections=sections}
+end
+local function executable(info,address,count)
+  for _,s in ipairs(info.sections) do if address&gt;=s[1] and address+count&lt;=s[2] then return true end end
+  return false
+end
+local function relTarget(info,address,opcode)
+  if not executable(info,address,5) or bytes(address,1)[1]~=opcode then fail('unexpected call/jump encoding') end
+  local target=address+5+signed32(address+1)
+  if not executable(info,target,1) then fail('visibility helper target is outside client code') end
+  return target
+end
+local function scan(info,definition)
+  -- Count all candidates ourselves. Some CE "Unique" APIs stop at one match.
+  local list=AOBScan(definition.pattern,'+X',0,'1')
+  local candidates={};local length=#tokens(definition.pattern)
+  if list then
+    local ok,why=pcall(function()
+      for i=0,list.Count-1 do
+        local address=tonumber(list[i],16)
+        if address and executable(info,address,length) then candidates[#candidates+1]=address end
+      end
+    end)
+    list.destroy()
+    if not ok then fail(tostring(why)) end
+  end
+  if #candidates~=1 then fail(definition.name..' pattern has '..#candidates..' client-code matches; expected exactly 1. Update review required.') end
+  local address=candidates[1];local snapshot=bytes(address,length)
+  if not matches(snapshot,definition.pattern) then fail(definition.name..' code changed during scan') end
+  return {definition=definition,address=address,original=snapshot,branch=address+definition.branch,byte=address+definition.branch+1}
+end
+local function validateSite(info,site,referenceOnly)
+  local d=site.definition;local pair=bytes(site.branch,2)
+  if pair[1]~=0x74 then fail(d.name..' is no longer a short JZ') end
+  if not referenceOnly then
+    if pair[2]==0 then fail(d.name..' is already patched. Disable earlier visibility tables first.') end
+    if pair[2]&gt;127 then fail(d.name..' is no longer a forward fade decision') end
+    local normal=site.branch+2+pair[2]
+    if not executable(info,normal,#tokens(d.normal)) or not matches(bytes(normal,#tokens(d.normal)),d.normal) then
+      fail(d.name..' normal-visibility branch changed; refusing patch')
+    end
+  end
+  site.predicate=relTarget(info,site.address+d.call,0xE8)
+  if d.getter then
+    site.getter=relTarget(info,site.address+d.getter,0xE8)
+    site.setter=relTarget(info,site.address+d.setter,0xE8)
+  end
+  site.originalDisplacement=pair[2]
+  site.patched={};for i,v in ipairs(site.original) do site.patched[i]=v end
+  site.patched[d.branch+2]=0
+end
+local function checkIdentity(state)
+  local info=moduleInfo()
+  if info.pid~=state.pid or info.base~=state.base or info.size~=state.size or info.stamp~=state.stamp then
+    fail('the selected process/image changed. Select the original process to restore; never write saved addresses into a restarted client.')
+  end
+  return info
+end
+local function assemble(assertions,writes)
+  if #writes==0 then return end
+  local source=table.concat(assertions,'\n')..'\n'..table.concat(writes,'\n')
+  local ok,why=autoAssemble(source,false)
+  if not ok then fail('Auto Assembler rejected the byte change: '..tostring(why)) end
+end
+local function forgetSymbols(state)
+  for _,name in ipairs(state.registered or {}) do unregisterSymbol(name) end
+  state.registered={}
+end
+local function restore(state)
+  local info=checkIdentity(state);local assertions={};local writes={}
+  for _,site in ipairs(state.sites) do
+    if not executable(info,site.address,#site.original) then fail('saved site is outside client code') end
+    local current=bytes(site.address,#site.original)
+    if not same(current,site.original) and not same(current,site.patched) then
+      fail(site.definition.name..' context changed after enabling. Saved bytes retained; refusing to overwrite other code.')
+    end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(current))
+    if not same(current,site.original) then
+      writes[#writes+1]=string.format('%X:\n db %02X',site.byte,site.originalDisplacement)
+    end
+  end
+  assemble(assertions,writes)
+  for _,site in ipairs(state.sites) do if not same(bytes(site.address,#site.original),site.original) then fail('restoration read-back failed; original bytes retained') end end
+  forgetSymbols(state)
+end
+local function run(action,selection)
+  local key=statePrefix..selection
+  local previous=_G[key]
+  if action=='disable' then
+    if not previous then return end
+    local ok,why=pcall(restore,previous)
+    if not ok then previous.status='needs_recovery';fail(tostring(why)) end
+    _G[key]=nil;return
+  end
+  if previous then
+    if previous.status~='needs_recovery' then fail('this entry is already active in this CE session') end
+    restore(previous);_G[key]=nil
+  end
+  local info=moduleInfo();local found={};local chosen={}
+  -- Pet and rider use the same native visibility predicate. The horse wrapper
+  -- tail-calls that predicate, and shares the rider's render flag getter/setter.
+  found.rider=scan(info,definitions.rider)
+  validateSite(info,found.rider,selection=='pets')
+  if selection=='avatars' or selection=='all' then
+    found.horse=scan(info,definitions.horse);validateSite(info,found.horse,false)
+    local wrapper=found.horse.predicate;local wlen=#tokens(horseWrapper)
+    if not executable(info,wrapper,wlen) or not matches(bytes(wrapper,wlen),horseWrapper) then fail('horse-to-player visibility wrapper changed') end
+    if wrapper+21+bytes(wrapper+20,1)[1]~=wrapper+33 then fail('horse wrapper null-owner branch changed') end
+    if relTarget(info,wrapper+28,0xE9)~=found.rider.predicate then fail('horse/rider visibility helpers no longer agree') end
+    if found.horse.getter~=found.rider.getter or found.horse.setter~=found.rider.setter then fail('horse/rider rendering helpers no longer agree') end
+    chosen[#chosen+1]=found.rider;chosen[#chosen+1]=found.horse
+  end
+  if selection=='pets' or selection=='all' then
+    found.pet=scan(info,definitions.pet);validateSite(info,found.pet,false)
+    if found.pet.predicate~=found.rider.predicate then fail('pet/rider visibility helpers no longer agree') end
+    chosen[#chosen+1]=found.pet
+  end
+  if #chosen==0 then fail('invalid entry selection') end
+  local addresses={};local assertions={};local writes={}
+  for _,site in ipairs(chosen) do
+    if addresses[site.byte] then fail('overlapping patch sites') end;addresses[site.byte]=true
+    if getAddressSafe(site.definition.symbol) then fail('a visibility symbol is already registered; disable the other v4 table') end
+    if not same(bytes(site.address,#site.original),site.original) then fail('code changed after validation') end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(site.original))
+    writes[#writes+1]=string.format('%X:\n db 00',site.byte)
+  end
+  local state={pid=info.pid,base=info.base,size=info.size,stamp=info.stamp,sites=chosen,status='enabling',registered={}}
+  _G[key]=state
+  local ok,why=pcall(function()
+    assemble(assertions,writes)
+    for _,site in ipairs(chosen) do
+      if not same(bytes(site.address,#site.patched),site.patched) then fail(site.definition.name..' enable read-back failed') end
+    end
+    for _,site in ipairs(chosen) do
+      registerSymbol(site.definition.symbol,site.byte,true)
+      state.registered[#state.registered+1]=site.definition.symbol
+    end
+    state.status='active'
+  end)
+  if not ok then
+    state.status='needs_recovery'
+    local rolledBack,rollbackError=pcall(restore,state)
+    if rolledBack then _G[key]=nil;fail(tostring(why)..'; original bytes restored') end
+    fail(tostring(why)..'; automatic restoration also failed: '..tostring(rollbackError)..'. Backups retained in CE; retry this entry for recovery.')
+  end
+end
+
+run('enable','avatars')
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+-- Embedded in each AA entry; only runs when the user toggles that entry.
+-- No fixed patch RVAs, build timestamps, heap pointers or original branch distances.
+local moduleName='SSOClient.exe'
+local statePrefix='SSOVisibilityAOB4_'
+local definitions={
+  rider={name='rider',symbol='SSOHideAOB4_Rider',branch=10,call=3,getter=17,setter=35,
+    pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 ?? ?? ?? ?? F3 0F 10 B6 ?? ?? ?? ??',
+    normal='83 FF 04'},
+  horse={name='horse',symbol='SSOHideAOB4_Horse',branch=14,call=7,getter=21,setter=39,
+    pattern='4C 8D BE ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 10 0F',
+    normal='83 FB 04'},
+  pet={name='pet',symbol='SSOHideAOB4_Pet',branch=24,call=6,
+    pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 ?? ?? ?? ?? 0F 57 F6 84 C0 74 ?? F3 0F 5C D7 F3 0F 5F D6 EB ?? F3 0F 58 D7 F3 0F 5D 93 ?? ?? ?? ??',
+    normal='F3 0F 58 D7'}
+}
+local horseWrapper='48 83 EC 28 48 81 C1 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 ?? 48 8B C8 48 83 C4 28 E9 ?? ?? ?? ?? B0 01 48 83 C4 28 C3'
+
+local function fail(message) error('SSO visibility AOB v4: '..message,0) end
+local function bytes(address,count)
+  local value=readBytes(address,count,true)
+  if not value or #value~=count then fail('cannot read '..string.format('%X',address)) end
+  return value
+end
+local function same(a,b)
+  if not a or not b or #a~=#b then return false end
+  for i=1,#a do if a[i]~=b[i] then return false end end
+  return true
+end
+local function hex(value)
+  local result={};for i=1,#value do result[i]=string.format('%02X',value[i]) end
+  return table.concat(result,' ')
+end
+local function tokens(pattern)
+  local result={};for part in pattern:gmatch('%S+') do result[#result+1]=part end
+  return result
+end
+local function matches(value,pattern)
+  local p=tokens(pattern);if #value~=#p then return false end
+  for i=1,#p do if p[i]~='??' and value[i]~=tonumber(p[i],16) then return false end end
+  return true
+end
+local function u32(address)
+  local b=bytes(address,4);return b[1]+256*b[2]+65536*b[3]+16777216*b[4]
+end
+local function signed32(address)
+  local n=u32(address);if n&gt;=2147483648 then n=n-4294967296 end;return n
+end
+local function moduleInfo()
+  local base=getAddressSafe(moduleName)
+  if not base then fail('select SSOClient.exe first') end
+  if not same(bytes(base,2),{0x4D,0x5A}) then fail('invalid PE header') end
+  local pe=base+u32(base+0x3C)
+  if not same(bytes(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires a 64-bit Windows client') end
+  local count=bytes(pe+6,2);count=count[1]+256*count[2]
+  local optional=pe+24
+  if not same(bytes(optional,2),{0x0B,0x02}) then fail('expected PE32+ image') end
+  local size=u32(optional+56)
+  if size&lt;0x10000 or size&gt;0x40000000 or count&lt;1 or count&gt;96 then fail('invalid image layout') end
+  local osize=bytes(pe+20,2);osize=osize[1]+256*osize[2]
+  local sections={}
+  for i=0,count-1 do
+    local h=optional+osize+40*i
+    if (u32(h+36)&amp;0x20000000)~=0 then
+      local start=base+u32(h+12)
+      local length=math.max(u32(h+8),u32(h+16))
+      if start&lt;base or length&lt;=0 or start+length&gt;base+size then fail('invalid executable section') end
+      sections[#sections+1]={start,start+length}
+    end
+  end
+  if #sections==0 then fail('no executable sections') end
+  return {base=base,size=size,stamp=u32(pe+8),pid=getOpenedProcessID(),sections=sections}
+end
+local function executable(info,address,count)
+  for _,s in ipairs(info.sections) do if address&gt;=s[1] and address+count&lt;=s[2] then return true end end
+  return false
+end
+local function relTarget(info,address,opcode)
+  if not executable(info,address,5) or bytes(address,1)[1]~=opcode then fail('unexpected call/jump encoding') end
+  local target=address+5+signed32(address+1)
+  if not executable(info,target,1) then fail('visibility helper target is outside client code') end
+  return target
+end
+local function scan(info,definition)
+  -- Count all candidates ourselves. Some CE "Unique" APIs stop at one match.
+  local list=AOBScan(definition.pattern,'+X',0,'1')
+  local candidates={};local length=#tokens(definition.pattern)
+  if list then
+    local ok,why=pcall(function()
+      for i=0,list.Count-1 do
+        local address=tonumber(list[i],16)
+        if address and executable(info,address,length) then candidates[#candidates+1]=address end
+      end
+    end)
+    list.destroy()
+    if not ok then fail(tostring(why)) end
+  end
+  if #candidates~=1 then fail(definition.name..' pattern has '..#candidates..' client-code matches; expected exactly 1. Update review required.') end
+  local address=candidates[1];local snapshot=bytes(address,length)
+  if not matches(snapshot,definition.pattern) then fail(definition.name..' code changed during scan') end
+  return {definition=definition,address=address,original=snapshot,branch=address+definition.branch,byte=address+definition.branch+1}
+end
+local function validateSite(info,site,referenceOnly)
+  local d=site.definition;local pair=bytes(site.branch,2)
+  if pair[1]~=0x74 then fail(d.name..' is no longer a short JZ') end
+  if not referenceOnly then
+    if pair[2]==0 then fail(d.name..' is already patched. Disable earlier visibility tables first.') end
+    if pair[2]&gt;127 then fail(d.name..' is no longer a forward fade decision') end
+    local normal=site.branch+2+pair[2]
+    if not executable(info,normal,#tokens(d.normal)) or not matches(bytes(normal,#tokens(d.normal)),d.normal) then
+      fail(d.name..' normal-visibility branch changed; refusing patch')
+    end
+  end
+  site.predicate=relTarget(info,site.address+d.call,0xE8)
+  if d.getter then
+    site.getter=relTarget(info,site.address+d.getter,0xE8)
+    site.setter=relTarget(info,site.address+d.setter,0xE8)
+  end
+  site.originalDisplacement=pair[2]
+  site.patched={};for i,v in ipairs(site.original) do site.patched[i]=v end
+  site.patched[d.branch+2]=0
+end
+local function checkIdentity(state)
+  local info=moduleInfo()
+  if info.pid~=state.pid or info.base~=state.base or info.size~=state.size or info.stamp~=state.stamp then
+    fail('the selected process/image changed. Select the original process to restore; never write saved addresses into a restarted client.')
+  end
+  return info
+end
+local function assemble(assertions,writes)
+  if #writes==0 then return end
+  local source=table.concat(assertions,'\n')..'\n'..table.concat(writes,'\n')
+  local ok,why=autoAssemble(source,false)
+  if not ok then fail('Auto Assembler rejected the byte change: '..tostring(why)) end
+end
+local function forgetSymbols(state)
+  for _,name in ipairs(state.registered or {}) do unregisterSymbol(name) end
+  state.registered={}
+end
+local function restore(state)
+  local info=checkIdentity(state);local assertions={};local writes={}
+  for _,site in ipairs(state.sites) do
+    if not executable(info,site.address,#site.original) then fail('saved site is outside client code') end
+    local current=bytes(site.address,#site.original)
+    if not same(current,site.original) and not same(current,site.patched) then
+      fail(site.definition.name..' context changed after enabling. Saved bytes retained; refusing to overwrite other code.')
+    end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(current))
+    if not same(current,site.original) then
+      writes[#writes+1]=string.format('%X:\n db %02X',site.byte,site.originalDisplacement)
+    end
+  end
+  assemble(assertions,writes)
+  for _,site in ipairs(state.sites) do if not same(bytes(site.address,#site.original),site.original) then fail('restoration read-back failed; original bytes retained') end end
+  forgetSymbols(state)
+end
+local function run(action,selection)
+  local key=statePrefix..selection
+  local previous=_G[key]
+  if action=='disable' then
+    if not previous then return end
+    local ok,why=pcall(restore,previous)
+    if not ok then previous.status='needs_recovery';fail(tostring(why)) end
+    _G[key]=nil;return
+  end
+  if previous then
+    if previous.status~='needs_recovery' then fail('this entry is already active in this CE session') end
+    restore(previous);_G[key]=nil
+  end
+  local info=moduleInfo();local found={};local chosen={}
+  -- Pet and rider use the same native visibility predicate. The horse wrapper
+  -- tail-calls that predicate, and shares the rider's render flag getter/setter.
+  found.rider=scan(info,definitions.rider)
+  validateSite(info,found.rider,selection=='pets')
+  if selection=='avatars' or selection=='all' then
+    found.horse=scan(info,definitions.horse);validateSite(info,found.horse,false)
+    local wrapper=found.horse.predicate;local wlen=#tokens(horseWrapper)
+    if not executable(info,wrapper,wlen) or not matches(bytes(wrapper,wlen),horseWrapper) then fail('horse-to-player visibility wrapper changed') end
+    if wrapper+21+bytes(wrapper+20,1)[1]~=wrapper+33 then fail('horse wrapper null-owner branch changed') end
+    if relTarget(info,wrapper+28,0xE9)~=found.rider.predicate then fail('horse/rider visibility helpers no longer agree') end
+    if found.horse.getter~=found.rider.getter or found.horse.setter~=found.rider.setter then fail('horse/rider rendering helpers no longer agree') end
+    chosen[#chosen+1]=found.rider;chosen[#chosen+1]=found.horse
+  end
+  if selection=='pets' or selection=='all' then
+    found.pet=scan(info,definitions.pet);validateSite(info,found.pet,false)
+    if found.pet.predicate~=found.rider.predicate then fail('pet/rider visibility helpers no longer agree') end
+    chosen[#chosen+1]=found.pet
+  end
+  if #chosen==0 then fail('invalid entry selection') end
+  local addresses={};local assertions={};local writes={}
+  for _,site in ipairs(chosen) do
+    if addresses[site.byte] then fail('overlapping patch sites') end;addresses[site.byte]=true
+    if getAddressSafe(site.definition.symbol) then fail('a visibility symbol is already registered; disable the other v4 table') end
+    if not same(bytes(site.address,#site.original),site.original) then fail('code changed after validation') end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(site.original))
+    writes[#writes+1]=string.format('%X:\n db 00',site.byte)
+  end
+  local state={pid=info.pid,base=info.base,size=info.size,stamp=info.stamp,sites=chosen,status='enabling',registered={}}
+  _G[key]=state
+  local ok,why=pcall(function()
+    assemble(assertions,writes)
+    for _,site in ipairs(chosen) do
+      if not same(bytes(site.address,#site.patched),site.patched) then fail(site.definition.name..' enable read-back failed') end
+    end
+    for _,site in ipairs(chosen) do
+      registerSymbol(site.definition.symbol,site.byte,true)
+      state.registered[#state.registered+1]=site.definition.symbol
+    end
+    state.status='active'
+  end)
+  if not ok then
+    state.status='needs_recovery'
+    local rolledBack,rollbackError=pcall(restore,state)
+    if rolledBack then _G[key]=nil;fail(tostring(why)..'; original bytes restored') end
+    fail(tostring(why)..'; automatic restoration also failed: '..tostring(rollbackError)..'. Backups retained in CE; retry this entry for recovery.')
+  end
+end
+
+run('disable','avatars')
+{$asm}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"AOB v4: hide other players' pets"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>// Update-tolerant AOB visibility patch; future semantic changes still require review.
+// Exact-match count + branch/helper validation + dynamic original-byte restoration.
+// Disable earlier visibility tables first; keep CE open until restoration.
+
+[ENABLE]
+{$lua}
+if syntaxcheck then return end
+-- Embedded in each AA entry; only runs when the user toggles that entry.
+-- No fixed patch RVAs, build timestamps, heap pointers or original branch distances.
+local moduleName='SSOClient.exe'
+local statePrefix='SSOVisibilityAOB4_'
+local definitions={
+  rider={name='rider',symbol='SSOHideAOB4_Rider',branch=10,call=3,getter=17,setter=35,
+    pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 ?? ?? ?? ?? F3 0F 10 B6 ?? ?? ?? ??',
+    normal='83 FF 04'},
+  horse={name='horse',symbol='SSOHideAOB4_Horse',branch=14,call=7,getter=21,setter=39,
+    pattern='4C 8D BE ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 10 0F',
+    normal='83 FB 04'},
+  pet={name='pet',symbol='SSOHideAOB4_Pet',branch=24,call=6,
+    pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 ?? ?? ?? ?? 0F 57 F6 84 C0 74 ?? F3 0F 5C D7 F3 0F 5F D6 EB ?? F3 0F 58 D7 F3 0F 5D 93 ?? ?? ?? ??',
+    normal='F3 0F 58 D7'}
+}
+local horseWrapper='48 83 EC 28 48 81 C1 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 ?? 48 8B C8 48 83 C4 28 E9 ?? ?? ?? ?? B0 01 48 83 C4 28 C3'
+
+local function fail(message) error('SSO visibility AOB v4: '..message,0) end
+local function bytes(address,count)
+  local value=readBytes(address,count,true)
+  if not value or #value~=count then fail('cannot read '..string.format('%X',address)) end
+  return value
+end
+local function same(a,b)
+  if not a or not b or #a~=#b then return false end
+  for i=1,#a do if a[i]~=b[i] then return false end end
+  return true
+end
+local function hex(value)
+  local result={};for i=1,#value do result[i]=string.format('%02X',value[i]) end
+  return table.concat(result,' ')
+end
+local function tokens(pattern)
+  local result={};for part in pattern:gmatch('%S+') do result[#result+1]=part end
+  return result
+end
+local function matches(value,pattern)
+  local p=tokens(pattern);if #value~=#p then return false end
+  for i=1,#p do if p[i]~='??' and value[i]~=tonumber(p[i],16) then return false end end
+  return true
+end
+local function u32(address)
+  local b=bytes(address,4);return b[1]+256*b[2]+65536*b[3]+16777216*b[4]
+end
+local function signed32(address)
+  local n=u32(address);if n&gt;=2147483648 then n=n-4294967296 end;return n
+end
+local function moduleInfo()
+  local base=getAddressSafe(moduleName)
+  if not base then fail('select SSOClient.exe first') end
+  if not same(bytes(base,2),{0x4D,0x5A}) then fail('invalid PE header') end
+  local pe=base+u32(base+0x3C)
+  if not same(bytes(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires a 64-bit Windows client') end
+  local count=bytes(pe+6,2);count=count[1]+256*count[2]
+  local optional=pe+24
+  if not same(bytes(optional,2),{0x0B,0x02}) then fail('expected PE32+ image') end
+  local size=u32(optional+56)
+  if size&lt;0x10000 or size&gt;0x40000000 or count&lt;1 or count&gt;96 then fail('invalid image layout') end
+  local osize=bytes(pe+20,2);osize=osize[1]+256*osize[2]
+  local sections={}
+  for i=0,count-1 do
+    local h=optional+osize+40*i
+    if (u32(h+36)&amp;0x20000000)~=0 then
+      local start=base+u32(h+12)
+      local length=math.max(u32(h+8),u32(h+16))
+      if start&lt;base or length&lt;=0 or start+length&gt;base+size then fail('invalid executable section') end
+      sections[#sections+1]={start,start+length}
+    end
+  end
+  if #sections==0 then fail('no executable sections') end
+  return {base=base,size=size,stamp=u32(pe+8),pid=getOpenedProcessID(),sections=sections}
+end
+local function executable(info,address,count)
+  for _,s in ipairs(info.sections) do if address&gt;=s[1] and address+count&lt;=s[2] then return true end end
+  return false
+end
+local function relTarget(info,address,opcode)
+  if not executable(info,address,5) or bytes(address,1)[1]~=opcode then fail('unexpected call/jump encoding') end
+  local target=address+5+signed32(address+1)
+  if not executable(info,target,1) then fail('visibility helper target is outside client code') end
+  return target
+end
+local function scan(info,definition)
+  -- Count all candidates ourselves. Some CE "Unique" APIs stop at one match.
+  local list=AOBScan(definition.pattern,'+X',0,'1')
+  local candidates={};local length=#tokens(definition.pattern)
+  if list then
+    local ok,why=pcall(function()
+      for i=0,list.Count-1 do
+        local address=tonumber(list[i],16)
+        if address and executable(info,address,length) then candidates[#candidates+1]=address end
+      end
+    end)
+    list.destroy()
+    if not ok then fail(tostring(why)) end
+  end
+  if #candidates~=1 then fail(definition.name..' pattern has '..#candidates..' client-code matches; expected exactly 1. Update review required.') end
+  local address=candidates[1];local snapshot=bytes(address,length)
+  if not matches(snapshot,definition.pattern) then fail(definition.name..' code changed during scan') end
+  return {definition=definition,address=address,original=snapshot,branch=address+definition.branch,byte=address+definition.branch+1}
+end
+local function validateSite(info,site,referenceOnly)
+  local d=site.definition;local pair=bytes(site.branch,2)
+  if pair[1]~=0x74 then fail(d.name..' is no longer a short JZ') end
+  if not referenceOnly then
+    if pair[2]==0 then fail(d.name..' is already patched. Disable earlier visibility tables first.') end
+    if pair[2]&gt;127 then fail(d.name..' is no longer a forward fade decision') end
+    local normal=site.branch+2+pair[2]
+    if not executable(info,normal,#tokens(d.normal)) or not matches(bytes(normal,#tokens(d.normal)),d.normal) then
+      fail(d.name..' normal-visibility branch changed; refusing patch')
+    end
+  end
+  site.predicate=relTarget(info,site.address+d.call,0xE8)
+  if d.getter then
+    site.getter=relTarget(info,site.address+d.getter,0xE8)
+    site.setter=relTarget(info,site.address+d.setter,0xE8)
+  end
+  site.originalDisplacement=pair[2]
+  site.patched={};for i,v in ipairs(site.original) do site.patched[i]=v end
+  site.patched[d.branch+2]=0
+end
+local function checkIdentity(state)
+  local info=moduleInfo()
+  if info.pid~=state.pid or info.base~=state.base or info.size~=state.size or info.stamp~=state.stamp then
+    fail('the selected process/image changed. Select the original process to restore; never write saved addresses into a restarted client.')
+  end
+  return info
+end
+local function assemble(assertions,writes)
+  if #writes==0 then return end
+  local source=table.concat(assertions,'\n')..'\n'..table.concat(writes,'\n')
+  local ok,why=autoAssemble(source,false)
+  if not ok then fail('Auto Assembler rejected the byte change: '..tostring(why)) end
+end
+local function forgetSymbols(state)
+  for _,name in ipairs(state.registered or {}) do unregisterSymbol(name) end
+  state.registered={}
+end
+local function restore(state)
+  local info=checkIdentity(state);local assertions={};local writes={}
+  for _,site in ipairs(state.sites) do
+    if not executable(info,site.address,#site.original) then fail('saved site is outside client code') end
+    local current=bytes(site.address,#site.original)
+    if not same(current,site.original) and not same(current,site.patched) then
+      fail(site.definition.name..' context changed after enabling. Saved bytes retained; refusing to overwrite other code.')
+    end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(current))
+    if not same(current,site.original) then
+      writes[#writes+1]=string.format('%X:\n db %02X',site.byte,site.originalDisplacement)
+    end
+  end
+  assemble(assertions,writes)
+  for _,site in ipairs(state.sites) do if not same(bytes(site.address,#site.original),site.original) then fail('restoration read-back failed; original bytes retained') end end
+  forgetSymbols(state)
+end
+local function run(action,selection)
+  local key=statePrefix..selection
+  local previous=_G[key]
+  if action=='disable' then
+    if not previous then return end
+    local ok,why=pcall(restore,previous)
+    if not ok then previous.status='needs_recovery';fail(tostring(why)) end
+    _G[key]=nil;return
+  end
+  if previous then
+    if previous.status~='needs_recovery' then fail('this entry is already active in this CE session') end
+    restore(previous);_G[key]=nil
+  end
+  local info=moduleInfo();local found={};local chosen={}
+  -- Pet and rider use the same native visibility predicate. The horse wrapper
+  -- tail-calls that predicate, and shares the rider's render flag getter/setter.
+  found.rider=scan(info,definitions.rider)
+  validateSite(info,found.rider,selection=='pets')
+  if selection=='avatars' or selection=='all' then
+    found.horse=scan(info,definitions.horse);validateSite(info,found.horse,false)
+    local wrapper=found.horse.predicate;local wlen=#tokens(horseWrapper)
+    if not executable(info,wrapper,wlen) or not matches(bytes(wrapper,wlen),horseWrapper) then fail('horse-to-player visibility wrapper changed') end
+    if wrapper+21+bytes(wrapper+20,1)[1]~=wrapper+33 then fail('horse wrapper null-owner branch changed') end
+    if relTarget(info,wrapper+28,0xE9)~=found.rider.predicate then fail('horse/rider visibility helpers no longer agree') end
+    if found.horse.getter~=found.rider.getter or found.horse.setter~=found.rider.setter then fail('horse/rider rendering helpers no longer agree') end
+    chosen[#chosen+1]=found.rider;chosen[#chosen+1]=found.horse
+  end
+  if selection=='pets' or selection=='all' then
+    found.pet=scan(info,definitions.pet);validateSite(info,found.pet,false)
+    if found.pet.predicate~=found.rider.predicate then fail('pet/rider visibility helpers no longer agree') end
+    chosen[#chosen+1]=found.pet
+  end
+  if #chosen==0 then fail('invalid entry selection') end
+  local addresses={};local assertions={};local writes={}
+  for _,site in ipairs(chosen) do
+    if addresses[site.byte] then fail('overlapping patch sites') end;addresses[site.byte]=true
+    if getAddressSafe(site.definition.symbol) then fail('a visibility symbol is already registered; disable the other v4 table') end
+    if not same(bytes(site.address,#site.original),site.original) then fail('code changed after validation') end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(site.original))
+    writes[#writes+1]=string.format('%X:\n db 00',site.byte)
+  end
+  local state={pid=info.pid,base=info.base,size=info.size,stamp=info.stamp,sites=chosen,status='enabling',registered={}}
+  _G[key]=state
+  local ok,why=pcall(function()
+    assemble(assertions,writes)
+    for _,site in ipairs(chosen) do
+      if not same(bytes(site.address,#site.patched),site.patched) then fail(site.definition.name..' enable read-back failed') end
+    end
+    for _,site in ipairs(chosen) do
+      registerSymbol(site.definition.symbol,site.byte,true)
+      state.registered[#state.registered+1]=site.definition.symbol
+    end
+    state.status='active'
+  end)
+  if not ok then
+    state.status='needs_recovery'
+    local rolledBack,rollbackError=pcall(restore,state)
+    if rolledBack then _G[key]=nil;fail(tostring(why)..'; original bytes restored') end
+    fail(tostring(why)..'; automatic restoration also failed: '..tostring(rollbackError)..'. Backups retained in CE; retry this entry for recovery.')
+  end
+end
+
+run('enable','pets')
+{$asm}
+
+[DISABLE]
+{$lua}
+if syntaxcheck then return end
+-- Embedded in each AA entry; only runs when the user toggles that entry.
+-- No fixed patch RVAs, build timestamps, heap pointers or original branch distances.
+local moduleName='SSOClient.exe'
+local statePrefix='SSOVisibilityAOB4_'
+local definitions={
+  rider={name='rider',symbol='SSOHideAOB4_Rider',branch=10,call=3,getter=17,setter=35,
+    pattern='48 8B CE E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 44 8B C0 33 D2 48 8B CE E8 ?? ?? ?? ?? F3 0F 10 B6 ?? ?? ?? ??',
+    normal='83 FF 04'},
+  horse={name='horse',symbol='SSOHideAOB4_Horse',branch=14,call=7,getter=21,setter=39,
+    pattern='4C 8D BE ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 74 ?? 33 D2 48 8B CE E8 ?? ?? ?? ?? 25 FF FF FF F3 33 D2 44 8B C0 48 8B CE E8 ?? ?? ?? ?? F3 41 0F 10 0F',
+    normal='83 FB 04'},
+  pet={name='pet',symbol='SSOHideAOB4_Pet',branch=24,call=6,
+    pattern='48 8B CD 0F 28 F8 E8 ?? ?? ?? ?? F3 0F 10 93 ?? ?? ?? ?? 0F 57 F6 84 C0 74 ?? F3 0F 5C D7 F3 0F 5F D6 EB ?? F3 0F 58 D7 F3 0F 5D 93 ?? ?? ?? ??',
+    normal='F3 0F 58 D7'}
+}
+local horseWrapper='48 83 EC 28 48 81 C1 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 85 C0 74 ?? 48 8B C8 48 83 C4 28 E9 ?? ?? ?? ?? B0 01 48 83 C4 28 C3'
+
+local function fail(message) error('SSO visibility AOB v4: '..message,0) end
+local function bytes(address,count)
+  local value=readBytes(address,count,true)
+  if not value or #value~=count then fail('cannot read '..string.format('%X',address)) end
+  return value
+end
+local function same(a,b)
+  if not a or not b or #a~=#b then return false end
+  for i=1,#a do if a[i]~=b[i] then return false end end
+  return true
+end
+local function hex(value)
+  local result={};for i=1,#value do result[i]=string.format('%02X',value[i]) end
+  return table.concat(result,' ')
+end
+local function tokens(pattern)
+  local result={};for part in pattern:gmatch('%S+') do result[#result+1]=part end
+  return result
+end
+local function matches(value,pattern)
+  local p=tokens(pattern);if #value~=#p then return false end
+  for i=1,#p do if p[i]~='??' and value[i]~=tonumber(p[i],16) then return false end end
+  return true
+end
+local function u32(address)
+  local b=bytes(address,4);return b[1]+256*b[2]+65536*b[3]+16777216*b[4]
+end
+local function signed32(address)
+  local n=u32(address);if n&gt;=2147483648 then n=n-4294967296 end;return n
+end
+local function moduleInfo()
+  local base=getAddressSafe(moduleName)
+  if not base then fail('select SSOClient.exe first') end
+  if not same(bytes(base,2),{0x4D,0x5A}) then fail('invalid PE header') end
+  local pe=base+u32(base+0x3C)
+  if not same(bytes(pe,6),{0x50,0x45,0,0,0x64,0x86}) then fail('requires a 64-bit Windows client') end
+  local count=bytes(pe+6,2);count=count[1]+256*count[2]
+  local optional=pe+24
+  if not same(bytes(optional,2),{0x0B,0x02}) then fail('expected PE32+ image') end
+  local size=u32(optional+56)
+  if size&lt;0x10000 or size&gt;0x40000000 or count&lt;1 or count&gt;96 then fail('invalid image layout') end
+  local osize=bytes(pe+20,2);osize=osize[1]+256*osize[2]
+  local sections={}
+  for i=0,count-1 do
+    local h=optional+osize+40*i
+    if (u32(h+36)&amp;0x20000000)~=0 then
+      local start=base+u32(h+12)
+      local length=math.max(u32(h+8),u32(h+16))
+      if start&lt;base or length&lt;=0 or start+length&gt;base+size then fail('invalid executable section') end
+      sections[#sections+1]={start,start+length}
+    end
+  end
+  if #sections==0 then fail('no executable sections') end
+  return {base=base,size=size,stamp=u32(pe+8),pid=getOpenedProcessID(),sections=sections}
+end
+local function executable(info,address,count)
+  for _,s in ipairs(info.sections) do if address&gt;=s[1] and address+count&lt;=s[2] then return true end end
+  return false
+end
+local function relTarget(info,address,opcode)
+  if not executable(info,address,5) or bytes(address,1)[1]~=opcode then fail('unexpected call/jump encoding') end
+  local target=address+5+signed32(address+1)
+  if not executable(info,target,1) then fail('visibility helper target is outside client code') end
+  return target
+end
+local function scan(info,definition)
+  -- Count all candidates ourselves. Some CE "Unique" APIs stop at one match.
+  local list=AOBScan(definition.pattern,'+X',0,'1')
+  local candidates={};local length=#tokens(definition.pattern)
+  if list then
+    local ok,why=pcall(function()
+      for i=0,list.Count-1 do
+        local address=tonumber(list[i],16)
+        if address and executable(info,address,length) then candidates[#candidates+1]=address end
+      end
+    end)
+    list.destroy()
+    if not ok then fail(tostring(why)) end
+  end
+  if #candidates~=1 then fail(definition.name..' pattern has '..#candidates..' client-code matches; expected exactly 1. Update review required.') end
+  local address=candidates[1];local snapshot=bytes(address,length)
+  if not matches(snapshot,definition.pattern) then fail(definition.name..' code changed during scan') end
+  return {definition=definition,address=address,original=snapshot,branch=address+definition.branch,byte=address+definition.branch+1}
+end
+local function validateSite(info,site,referenceOnly)
+  local d=site.definition;local pair=bytes(site.branch,2)
+  if pair[1]~=0x74 then fail(d.name..' is no longer a short JZ') end
+  if not referenceOnly then
+    if pair[2]==0 then fail(d.name..' is already patched. Disable earlier visibility tables first.') end
+    if pair[2]&gt;127 then fail(d.name..' is no longer a forward fade decision') end
+    local normal=site.branch+2+pair[2]
+    if not executable(info,normal,#tokens(d.normal)) or not matches(bytes(normal,#tokens(d.normal)),d.normal) then
+      fail(d.name..' normal-visibility branch changed; refusing patch')
+    end
+  end
+  site.predicate=relTarget(info,site.address+d.call,0xE8)
+  if d.getter then
+    site.getter=relTarget(info,site.address+d.getter,0xE8)
+    site.setter=relTarget(info,site.address+d.setter,0xE8)
+  end
+  site.originalDisplacement=pair[2]
+  site.patched={};for i,v in ipairs(site.original) do site.patched[i]=v end
+  site.patched[d.branch+2]=0
+end
+local function checkIdentity(state)
+  local info=moduleInfo()
+  if info.pid~=state.pid or info.base~=state.base or info.size~=state.size or info.stamp~=state.stamp then
+    fail('the selected process/image changed. Select the original process to restore; never write saved addresses into a restarted client.')
+  end
+  return info
+end
+local function assemble(assertions,writes)
+  if #writes==0 then return end
+  local source=table.concat(assertions,'\n')..'\n'..table.concat(writes,'\n')
+  local ok,why=autoAssemble(source,false)
+  if not ok then fail('Auto Assembler rejected the byte change: '..tostring(why)) end
+end
+local function forgetSymbols(state)
+  for _,name in ipairs(state.registered or {}) do unregisterSymbol(name) end
+  state.registered={}
+end
+local function restore(state)
+  local info=checkIdentity(state);local assertions={};local writes={}
+  for _,site in ipairs(state.sites) do
+    if not executable(info,site.address,#site.original) then fail('saved site is outside client code') end
+    local current=bytes(site.address,#site.original)
+    if not same(current,site.original) and not same(current,site.patched) then
+      fail(site.definition.name..' context changed after enabling. Saved bytes retained; refusing to overwrite other code.')
+    end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(current))
+    if not same(current,site.original) then
+      writes[#writes+1]=string.format('%X:\n db %02X',site.byte,site.originalDisplacement)
+    end
+  end
+  assemble(assertions,writes)
+  for _,site in ipairs(state.sites) do if not same(bytes(site.address,#site.original),site.original) then fail('restoration read-back failed; original bytes retained') end end
+  forgetSymbols(state)
+end
+local function run(action,selection)
+  local key=statePrefix..selection
+  local previous=_G[key]
+  if action=='disable' then
+    if not previous then return end
+    local ok,why=pcall(restore,previous)
+    if not ok then previous.status='needs_recovery';fail(tostring(why)) end
+    _G[key]=nil;return
+  end
+  if previous then
+    if previous.status~='needs_recovery' then fail('this entry is already active in this CE session') end
+    restore(previous);_G[key]=nil
+  end
+  local info=moduleInfo();local found={};local chosen={}
+  -- Pet and rider use the same native visibility predicate. The horse wrapper
+  -- tail-calls that predicate, and shares the rider's render flag getter/setter.
+  found.rider=scan(info,definitions.rider)
+  validateSite(info,found.rider,selection=='pets')
+  if selection=='avatars' or selection=='all' then
+    found.horse=scan(info,definitions.horse);validateSite(info,found.horse,false)
+    local wrapper=found.horse.predicate;local wlen=#tokens(horseWrapper)
+    if not executable(info,wrapper,wlen) or not matches(bytes(wrapper,wlen),horseWrapper) then fail('horse-to-player visibility wrapper changed') end
+    if wrapper+21+bytes(wrapper+20,1)[1]~=wrapper+33 then fail('horse wrapper null-owner branch changed') end
+    if relTarget(info,wrapper+28,0xE9)~=found.rider.predicate then fail('horse/rider visibility helpers no longer agree') end
+    if found.horse.getter~=found.rider.getter or found.horse.setter~=found.rider.setter then fail('horse/rider rendering helpers no longer agree') end
+    chosen[#chosen+1]=found.rider;chosen[#chosen+1]=found.horse
+  end
+  if selection=='pets' or selection=='all' then
+    found.pet=scan(info,definitions.pet);validateSite(info,found.pet,false)
+    if found.pet.predicate~=found.rider.predicate then fail('pet/rider visibility helpers no longer agree') end
+    chosen[#chosen+1]=found.pet
+  end
+  if #chosen==0 then fail('invalid entry selection') end
+  local addresses={};local assertions={};local writes={}
+  for _,site in ipairs(chosen) do
+    if addresses[site.byte] then fail('overlapping patch sites') end;addresses[site.byte]=true
+    if getAddressSafe(site.definition.symbol) then fail('a visibility symbol is already registered; disable the other v4 table') end
+    if not same(bytes(site.address,#site.original),site.original) then fail('code changed after validation') end
+    assertions[#assertions+1]=string.format('assert(%X,%s)',site.address,hex(site.original))
+    writes[#writes+1]=string.format('%X:\n db 00',site.byte)
+  end
+  local state={pid=info.pid,base=info.base,size=info.size,stamp=info.stamp,sites=chosen,status='enabling',registered={}}
+  _G[key]=state
+  local ok,why=pcall(function()
+    assemble(assertions,writes)
+    for _,site in ipairs(chosen) do
+      if not same(bytes(site.address,#site.patched),site.patched) then fail(site.definition.name..' enable read-back failed') end
+    end
+    for _,site in ipairs(chosen) do
+      registerSymbol(site.definition.symbol,site.byte,true)
+      state.registered[#state.registered+1]=site.definition.symbol
+    end
+    state.status='active'
+  end)
+  if not ok then
+    state.status='needs_recovery'
+    local rolledBack,rollbackError=pcall(restore,state)
+    if rolledBack then _G[key]=nil;fail(tostring(why)..'; original bytes restored') end
+    fail(tostring(why)..'; automatic restoration also failed: '..tostring(rollbackError)..'. Backups retained in CE; retry this entry for recovery.')
+  end
+end
+
+run('disable','pets')
+{$asm}
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"STATUS: resolves while enabled; leave these Byte rows unchecked"</Description>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"Rider byte (enabled = 00)"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <VariableType>Byte</VariableType>
+          <Address>SSOHideAOB4_Rider</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Horse byte (enabled = 00)"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <VariableType>Byte</VariableType>
+          <Address>SSOHideAOB4_Horse</Address>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>13</ID>
+          <Description>"Pet byte (enabled = 00)"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <VariableType>Byte</VariableType>
+          <Address>SSOHideAOB4_Pet</Address>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols />
+</CheatTable>

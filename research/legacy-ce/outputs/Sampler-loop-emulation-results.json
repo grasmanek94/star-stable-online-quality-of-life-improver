@@ -1,0 +1,28 @@
+{
+  "status": "pass",
+  "cases": 630,
+  "native_sampler_runs": 1320,
+  "restoration_cases": 30,
+  "restoration_cases_per_sampler": 15,
+  "math_helper_cases": 59,
+  "total_loop_iterations_removed": 101660,
+  "emulated_instruction_difference": 813652,
+  "seconds": 3.128,
+  "key_counts": "Selected counts spanning 0 to 65535, including boundaries and randomized cases; not exhaustive",
+  "comparisons": [
+    "output buffer bytes",
+    "guard bytes",
+    "returned output pointer",
+    "callee-saved registers including XMM6-XMM15",
+    "restored stack pointer",
+    "external math call arguments",
+    "enabled loops skipped",
+    "disabled behavior restored for both samplers"
+  ],
+  "math_model": "Sampler and search instructions are the original native bytes. External acosf/sinf calls use deterministic float32 Python math shims; runtime CRT integration is not tested.",
+  "limitations": [
+    "Does not attach to or patch the live game",
+    "Does not model CPU caches, timing, concurrency, integrity checks or arbitrary invalid inputs",
+    "This is not a guarantee against a live-game crash"
+  ]
+}

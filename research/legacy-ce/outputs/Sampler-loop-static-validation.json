@@ -1,0 +1,37 @@
+{
+  "status": "pass",
+  "method": "Static interpretation of only define/assert/db directives used by the delivered scripts; not the CE assembler",
+  "variants": [
+    {
+      "variant": "TEST: skip BOTH sampler touch loops (build 645.348067)",
+      "changed_rvas": [
+        "0x6842a4",
+        "0x684a06"
+      ],
+      "enable_only_expected_bytes": true,
+      "disable_restores_original": true,
+      "mismatched_timestamp_image_size_context_and_state_rejected": true
+    },
+    {
+      "variant": "TEST: skip quaternion touch loop ONLY",
+      "changed_rvas": [
+        "0x6842a4"
+      ],
+      "enable_only_expected_bytes": true,
+      "disable_restores_original": true,
+      "mismatched_timestamp_image_size_context_and_state_rejected": true
+    },
+    {
+      "variant": "TEST: skip vector touch loop ONLY",
+      "changed_rvas": [
+        "0x684a06"
+      ],
+      "enable_only_expected_bytes": true,
+      "disable_restores_original": true,
+      "mismatched_timestamp_image_size_context_and_state_rejected": true
+    }
+  ],
+  "table_contains_lua": false,
+  "entries_start_disabled": true,
+  "live_game_modified": false
+}

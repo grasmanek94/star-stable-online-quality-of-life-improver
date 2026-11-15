@@ -1,0 +1,8 @@
+{
+  "v3_horse_rider_visibility": "User confirmed other players and horses disappear while own character/horse remain visible",
+  "v3_pet_visibility": "User confirmed other players pets disappear while own pets remain visible",
+  "chat_or_network_behaviour_tested": false,
+  "controlled_fps_improvement_measured": false,
+  "v4_live_ce_execution": "User confirmed both AOB entries enable and retain the same behavior; own character/horse/pets stay visible",
+  "date": "2026-11-15"
+}

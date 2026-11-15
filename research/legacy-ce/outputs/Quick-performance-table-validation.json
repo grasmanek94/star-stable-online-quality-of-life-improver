@@ -1,0 +1,21 @@
+{
+  "status": "pass",
+  "native_visibility_lua": {
+    "all_16_boolean_combinations_restore": true,
+    "seven_invalid_build_pointer_or_data_cases_rejected_before_writes": true,
+    "syntax_check_performs_no_write": true,
+    "wrong_process_keeps_saved_state": true,
+    "recreated_settings_not_written": true,
+    "method": "Actual Lua bodies executed in isolated Lua 5.3 VM with mocked CE memory APIs; no game access"
+  },
+  "matrix_gate": {
+    "native_wrapper_emulations": 12,
+    "child_traversal_arguments_preserved": true,
+    "callee_saved_registers_and_stack_preserved": true,
+    "tick_skipped_when_enabled": true,
+    "method": "Original native wrapper instructions, external calls stubbed; no live-game test"
+  },
+  "live_game_modified": false,
+  "ce_autoassembler_executed": false,
+  "visibility_effect_confirmed": false
+}

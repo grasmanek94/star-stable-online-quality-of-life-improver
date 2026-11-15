@@ -1,0 +1,32 @@
+// EXPERIMENTAL performance A/B patch; no live-game crash guarantee.
+// SSOClient.exe 645.348067 / Stellar 645 only.
+// SHA256: 3CEC805521C70B64F1A33C5A0EFA67679B8112DACBE9594AB1B47301B4D3DE8D
+// Offline differential emulation: 630 input cases matched.
+// ENABLE: one-byte JZ -> JMP per selected loop; DISABLE restores JZ.
+// The key searches, interpolation, guards and function prologues remain intact.
+// All addresses are module-relative, so ASLR is supported.
+
+define(QuatTouchGate,SSOClient.exe+006842A4)
+define(VectorTouchGate,SSOClient.exe+00684A06)
+
+[ENABLE]
+assert(SSOClient.exe+00000178,D3 5B EB 6A)
+assert(SSOClient.exe+000001C0,00 F0 4A 01)
+assert(SSOClient.exe+006842A1,45 85 C9 74 29 66 66 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 8D 04 80 0F 10 04 83 8B 44 83 10 89 44 24 40 0F 11 44 24 30 41 3B C9 72 E1 48 8B)
+assert(SSOClient.exe+00684A03,45 85 C9 74 1E 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 03 C0 0F 10 04 C3 0F 11 44 24 28 41 3B C9 72 EA 48 8B 54 24 20 0F 28 D6 48 8B CB E8 DA)
+
+QuatTouchGate:
+  db EB
+VectorTouchGate:
+  db EB
+
+[DISABLE]
+assert(SSOClient.exe+00000178,D3 5B EB 6A)
+assert(SSOClient.exe+000001C0,00 F0 4A 01)
+assert(SSOClient.exe+006842A1,45 85 C9 EB 29 66 66 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 8D 04 80 0F 10 04 83 8B 44 83 10 89 44 24 40 0F 11 44 24 30 41 3B C9 72 E1 48 8B)
+assert(SSOClient.exe+00684A03,45 85 C9 EB 1E 0F 1F 84 00 00 00 00 00 8B C1 83 C1 08 48 03 C0 0F 10 04 C3 0F 11 44 24 28 41 3B C9 72 EA 48 8B 54 24 20 0F 28 D6 48 8B CB E8 DA)
+
+QuatTouchGate:
+  db 74
+VectorTouchGate:
+  db 74
