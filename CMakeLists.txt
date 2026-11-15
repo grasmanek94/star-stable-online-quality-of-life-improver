@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 # CMP0091 selects the CRT through a target property, rather than editing flags.
-project(SSOVisibility VERSION 1.2.0 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
+project(SSOVisibility VERSION 1.2.1 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     message(FATAL_ERROR "Use Windows with the Microsoft C compiler and x64 MASM (Visual Studio Desktop development with C++).")
@@ -56,6 +56,7 @@ else()
     endif()
 endif()
 target_include_directories(sso_visibility PRIVATE include generated src/visibility)
+target_compile_definitions(sso_visibility PRIVATE SSO_VERSION_STRING="${PROJECT_VERSION}")
 target_link_libraries(sso_visibility PRIVATE kernel32 user32)
 target_link_options(sso_visibility PRIVATE "/MAP:$<TARGET_FILE_DIR:sso_visibility>/$<TARGET_FILE_BASE_NAME:sso_visibility>.map")
 set_property(TARGET sso_visibility APPEND PROPERTY LINK_DEPENDS

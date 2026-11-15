@@ -8,14 +8,17 @@ import argparse
 import configparser
 import hashlib
 import json
+import re
 import shutil
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = re.search(r'project\(SSOVisibility\s+VERSION\s+(\d+\.\d+\.\d+(?:\.\d+)?)',
+                    (ROOT/'CMakeLists.txt').read_text()).group(1)
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--configuration', choices=('Release','Debug','RelWithDebInfo'), default='Release')
-parser.add_argument('--source', type=Path, default=ROOT/'out/packages/source/SSO-Visibility-Proxy-1.2.0-source.zip')
-parser.add_argument('--output', type=Path, default=ROOT/'out/releases/1.2.0')
+parser.add_argument('--source', type=Path, default=ROOT/f'out/packages/source/SSO-Visibility-Proxy-{VERSION}-source.zip')
+parser.add_argument('--output', type=Path, default=ROOT/'out/releases'/VERSION)
 args = parser.parse_args()
 
 def sha(data):
@@ -51,18 +54,18 @@ with zipfile.ZipFile(args.source) as archive:
         source_documentation[name] = archive.read(matches[0])
 args.output.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(args.source, args.output/args.source.name)
-manifest = dict(version='1.2.0', configuration=args.configuration, default_preset=8,
+manifest = dict(version=VERSION, configuration=args.configuration, default_preset=8,
     source_archive=dict(filename=args.source.name, sha256=sha(source)), adapters={}, live_1_2_verified=False)
-bundle = args.output/'SSO-Visibility-1.2.0-all-loaders.zip'
+bundle = args.output/f'SSO-Visibility-{VERSION}-all-loaders.zip'
 with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as target:
-    target.writestr('README.md', '# SSO Visibility 1.2.0\n\nChoose ONE adapter folder. Read its README.md and LOADER_ADAPTERS.md.\n'
+    target.writestr('README.md', f'# SSO Visibility {VERSION}\n\nChoose ONE adapter folder. Read its README.md and LOADER_ADAPTERS.md.\n'
         'Put SSOVisibility.ini beside the chosen module. Default8 hides remote riders/horses/pets.\n'
         'F5 enables, F6 restores, F7 reloads INI; Ctrl+Numpad0 all filters,1–9 presets.\n'
         'New1.2 live gameplay/loader/FPS validation remains pending. No third-party loader is bundled.\n'
         'Builds, hashes and isolated checks: docs/BUILD_VALIDATION.md. Request/repair handoff: docs/SESSION_HANDOFF.md.\n')
     for loader, filename in [('PROXY','opengl32.dll'),('RESHADE','SSOVisibility.addon64'),
                               ('ASI','SSOVisibility.asi'),('PLUGIN','SSOVisibility.dll')]:
-        path = ROOT/'out/packages'/loader/args.configuration/f'SSO-Visibility-Proxy-1.2.0-{loader}-win64.zip'
+        path = ROOT/'out/packages'/loader/args.configuration/f'SSO-Visibility-Proxy-{VERSION}-{loader}-win64.zip'
         with zipfile.ZipFile(path) as archive:
             if archive.testzip():
                 raise RuntimeError(f'Runtime ZIP CRC failure: {loader}')

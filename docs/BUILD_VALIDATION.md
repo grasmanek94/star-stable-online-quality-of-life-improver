@@ -1,10 +1,10 @@
-# Build validation — version 1.2.0, 2026-11-15
+# Build validation — version 1.2.1, 2026-11-15
 
 **PE metadata update:** rebuilt the same seven configurations with generated Windows VERSIONINFO resources; all42 CTest suite executions passed. Verified the requested identity, URL, author, copyright range, original filename, numeric/string version and Debug flags on all35 PE images. The unchanged incremental proxy build preserved its resource timestamp and DLL hash. Current build-validation.json includes each configuration's PE report count/hash; see PE_METADATA.md for generation details and the dated implementation journal.
 
 **Latest results are fresh builds in the linked repository checkout**, retaining its historical1.1.0 directory name. All seven configurations below passed again here (42 suites). tools/build.ps1 preserves per-configuration validation/ctest.xml and ctest.log; tools/record_validation.py verifies these and the current module/classifier/assembly hashes before generating build-validation.json. Earlier workspace1.2 results are retained separately as build-validation-workspace-1.2-history.json. The earlier source-portability test described below remains separate historical evidence.
 
-**GitHub Actions is disabled by request.** Its configuration is archived at .github/workflows/windows.yml.disabled. The local matrix is complete; no remote CI result is claimed. Optional tools/package_release.py verifies/collects the CPack packages under out/releases/1.2.0. See SESSION_HANDOFF.md for the current repository and commands.
+**GitHub Actions is disabled by request.** Its configuration is archived at .github/workflows/windows.yml.disabled. The local matrix is complete; no remote CI result is claimed. Optional tools/package_release.py verifies/collects the CPack packages under out/releases/1.2.1. See SESSION_HANDOFF.md for the current repository and commands.
 
 Validated on Windows x64 with Visual Studio 2026, MSVC19.51.36252.0, SDK10.0.26100.0 and CMake4.5.0-rc1. The client guard remains645.348067. Exact per-build SHA256, module filenames, private config RVAs, imports and counts are recorded in [build-validation.json](build-validation.json). Rebuilt binaries may have different timestamps/hashes; use their own metadata.
 

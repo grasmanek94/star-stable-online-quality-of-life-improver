@@ -2,7 +2,7 @@
 
 ## Current checkout
 
-The user's maintained checkout is `C:\Users\Rafal\Documents\Codex\2026-11-15\tr\outputs\Star-Stable-OpenGL-proxy-CMake\SSO-Visibility-Proxy-1.1.0-source`, remote `https://github.com/grasmanek94/star-stable-online-quality-of-life-improver.git`, branch master. The old directory name is retained; code version is **1.2.0**. Older workspace tree `sso-visibility-proxy` and original work/proxy scripts are historical snapshots. Make future changes here and build here.
+The user's maintained checkout is `C:\Users\Rafal\Documents\Codex\2026-11-15\tr\outputs\Star-Stable-OpenGL-proxy-CMake\SSO-Visibility-Proxy-1.1.0-source`, remote `https://github.com/grasmanek94/star-stable-online-quality-of-life-improver.git`, branch master. The old directory name is retained; code version is **1.2.1**. Older workspace tree `sso-visibility-proxy` and original work/proxy scripts are historical snapshots. Make future changes here and build here.
 
 Read README.md, AGENTS.md, IMPLEMENTATION_STATUS.md, REQUEST_HISTORY.md, JOURNAL.md, ARCHITECTURE.md and LOADER_ADAPTERS.md. Earlier discovery and failures are in REVERSE_ENGINEERING.md and SSO-Visibility-Engineering-Handoff.md. The runtime's data/ files and MASM wrapper order are canonical; historical static addresses elsewhere are not instructions to patch a newly updated client blindly.
 
@@ -32,7 +32,7 @@ cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/sour
 python tools/package_release.py
 ```
 
-The optional standard-library collector writes `out/releases/1.2.0/`, containing all four runtime ZIPs, combined loader ZIP, complete source ZIP and manifest. It checks archive CRCs, module/metadata hashes, config dimensions and default8. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
+The optional standard-library collector writes `out/releases/1.2.1/`, containing all four runtime ZIPs, combined loader ZIP, complete source ZIP and manifest. It checks archive CRCs, module/metadata hashes, config dimensions and default8. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
 
 ## Evidence map and boundaries
 

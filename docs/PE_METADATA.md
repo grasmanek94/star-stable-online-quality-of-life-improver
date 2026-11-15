@@ -13,7 +13,7 @@ Every project executable, shared DLL and module target configured by sso_configu
 | LegalCopyright | Copyright (c) 2026-&lt;UTC build year&gt; grasmanek94 |
 | Comments | Repository: https://github.com/grasmanek94/star-stable-online-quality-of-life-improver |
 | RepositoryURL | https://github.com/grasmanek94/star-stable-online-quality-of-life-improver |
-| FileVersion / ProductVersion | Four components from the CMake project version; currently1.2.0.0 |
+| FileVersion / ProductVersion | Four components from the CMake project version; currently1.2.1.0 |
 | OriginalFilename / InternalName | Actual target filename / filename without extension |
 
 The description contains the exact requested title followed by the repository URL. ProductName contains the title alone. The author is also CompanyName because that is a standard field shown by Windows file properties; Author/Authors are available to tools querying the explicit strings. In2026 the requested range is2026–2026. The English/Unicode string table uses0409/1200. EXE versus DLL resource type and Debug flag match the actual target/configuration.

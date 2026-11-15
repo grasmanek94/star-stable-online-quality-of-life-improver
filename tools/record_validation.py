@@ -13,6 +13,8 @@ import struct
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = re.search(r'project\(SSOVisibility\s+VERSION\s+(\d+\.\d+\.\d+(?:\.\d+)?)',
+                    (ROOT/'CMakeLists.txt').read_text()).group(1)
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--preset', default='vs2026-x64')
 parser.add_argument('--output', type=Path, default=ROOT/'docs/build-validation.json')
@@ -97,7 +99,7 @@ for name in ('src', 'include', 'generated', 'data', 'config', 'cmake'):
             inputs[path.relative_to(ROOT).as_posix()] = sha(path)
 for name in ('CMakeLists.txt', 'CMakePresets.json'):
     inputs[name] = sha(ROOT/name)
-report = dict(version='1.2.0', recorded_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+report = dict(version=VERSION, recorded_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     location='linked repository working tree', builds=builds, native_input_hashes=inputs,
     scope='Fresh local helper-process CTest and linked assembly results; no live 1.2 game/loader/FPS validation.',
     not_run=['separate VS2022 installation', 'remote GitHub Actions (disabled by request)',

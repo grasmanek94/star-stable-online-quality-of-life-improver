@@ -1,6 +1,8 @@
-# SSO Visibility 1.2.0
+# SSO Visibility 1.2.1
 
-This linked repository is the maintained checkout. The local directory may still be named `SSO-Visibility-Proxy-1.1.0-source`; the project/build version is1.2.0. [Session handoff](docs/SESSION_HANDOFF.md) and [request history](docs/REQUEST_HISTORY.md) preserve the final decisions and research context. GitHub Actions is currently disabled by request; its configuration is retained as `.github/workflows/windows.yml.disabled`.
+This linked repository is the maintained checkout. The local directory may still be named `SSO-Visibility-Proxy-1.1.0-source`; the project/build version is1.2.1. [Session handoff](docs/SESSION_HANDOFF.md) and [request history](docs/REQUEST_HISTORY.md) preserve the final decisions and research context. GitHub Actions is currently disabled by request; its configuration is retained as `.github/workflows/windows.yml.disabled`.
+
+[Release1.2.1](docs/releases/1.2.1.md) packages the PE metadata update and keeps the previous release's runtime file layout, with a committed-source ZIP added.
 
 A Windows x64 visibility controller for analyzed Star Stable client **645.348067**, with a shared native C17/MASM core and four loader adapters. No Cheat Engine, Lua, game files, IDA database, downloaded SDK or Python package is required to build or run it.
 
@@ -91,7 +93,7 @@ cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake
 
 Runtime packages include the chosen adapter, default INI, guide, loader notes, read-only diagnostic and matching symbols. The source ZIP includes all committed build inputs and research notes, excluding `out/`, caches, the client, IDB and raw ETLs.
 
-After building all four Release adapters with `-Package`, create the source ZIP with `cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source`. Optional `python tools/package_release.py` collects verified runtime/source ZIPs and a combined bundle under `out/releases/1.2.0/`. Optional `python tools/record_validation.py` records matching per-configuration CTest evidence after the seven-build matrix. The native build and ordinary CPack packaging do not require these Python utilities.
+After building all four Release adapters with `-Package`, create the source ZIP with `cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source`. Optional `python tools/package_release.py` collects verified runtime/source ZIPs and a combined bundle under `out/releases/1.2.1/`. Optional `python tools/record_validation.py` records matching per-configuration CTest evidence after the seven-build matrix. The native build and ordinary CPack packaging do not require these Python utilities.
 
 Start maintenance with [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [JOURNAL.md](docs/JOURNAL.md). Earlier actor/NPC analysis is retained in [REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md); its old DLL hashes and absolute paths are historical.
 
