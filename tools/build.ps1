@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Release','Debug','RelWithDebInfo')][string]$Configuration = 'Release',
     [ValidateSet('Auto','vs2026-x64','vs2022-x64')][string]$Preset = 'Auto',
+    [ValidateSet('PROXY','RESHADE','ASI','PLUGIN')][string]$Loader = 'PROXY',
     [switch]$SkipTests,
     [switch]$Package,
     [switch]$AsmTests
@@ -48,13 +49,20 @@ function Invoke-BuildTool([string]$Tool, [string[]]$ToolArguments) {
 
 Push-Location -LiteralPath $projectRoot
 try {
+    $configurePreset = if($Loader -eq 'PROXY'){$Preset}else{$Preset + '-' + $Loader.ToLowerInvariant()}
     $asmChoice = if ($AsmTests) { 'ON' } else { 'OFF' }
-    Invoke-BuildTool $cmakePath @('--preset', $Preset, "-DCMAKE_GENERATOR_INSTANCE=$($chosen.installationPath)", '-DBUILD_TESTING=ON', "-DSSO_PROXY_ENABLE_ASM_TESTS=$asmChoice")
-    $buildPath = Join-Path $projectRoot "out/build/$Preset"
+    Invoke-BuildTool $cmakePath @('--preset', $configurePreset, "-DCMAKE_GENERATOR_INSTANCE=$($chosen.installationPath)", '-DBUILD_TESTING=ON', "-DSSO_PROXY_ENABLE_ASM_TESTS=$asmChoice")
+    $buildPath = Join-Path $projectRoot "out/build/$configurePreset"
     Invoke-BuildTool $cmakePath @('--build', $buildPath, '--config', $Configuration, '--parallel')
-    if (-not $SkipTests) { Invoke-BuildTool $ctestPath @('--test-dir', $buildPath, '-C', $Configuration, '--output-on-failure') }
-    if ($Package) {
-        Invoke-BuildTool $cpackPath @('--config', (Join-Path $buildPath 'CPackConfig.cmake'), '-C', $Configuration, '-B', (Join-Path $projectRoot "out/packages/$Configuration"))
+    if (-not $SkipTests) {
+        $validationPath = Join-Path $buildPath "bin/$Configuration/validation"
+        [IO.Directory]::CreateDirectory($validationPath) | Out-Null
+        Invoke-BuildTool $ctestPath @('--test-dir', $buildPath, '-C', $Configuration, '--output-on-failure', '--output-junit', (Join-Path $validationPath 'ctest.xml'))
+        Copy-Item -LiteralPath (Join-Path $buildPath 'Testing/Temporary/LastTest.log') -Destination (Join-Path $validationPath 'ctest.log')
     }
-    Write-Host "DLL: $(Join-Path $buildPath "bin/$Configuration/opengl32.dll")"
+    if ($Package) {
+        Invoke-BuildTool $cpackPath @('--config', (Join-Path $buildPath 'CPackConfig.cmake'), '-C', $Configuration, '-B', (Join-Path $projectRoot "out/packages/$Loader/$Configuration"))
+    }
+    $artifact = switch($Loader){'PROXY'{'opengl32.dll'} 'RESHADE'{'SSOVisibility.addon64'} 'ASI'{'SSOVisibility.asi'} default{'SSOVisibility.dll'}}
+    Write-Host "Artifact: $(Join-Path $buildPath "bin/$Configuration/$artifact")"
 } finally { Pop-Location }

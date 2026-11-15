@@ -18,7 +18,8 @@
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
       "cacheVariables": {
-        "BUILD_TESTING": true
+        "BUILD_TESTING": true,
+        "SSO_HOST": "PROXY"
       }
     },
     {
@@ -45,6 +46,54 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "vs2026-x64-reshade",
+      "inherits": "vs2026-x64",
+      "displayName": "vs2026 x64 - reshade loader",
+      "cacheVariables": {
+        "SSO_HOST": "RESHADE"
+      }
+    },
+    {
+      "name": "vs2026-x64-asi",
+      "inherits": "vs2026-x64",
+      "displayName": "vs2026 x64 - asi loader",
+      "cacheVariables": {
+        "SSO_HOST": "ASI"
+      }
+    },
+    {
+      "name": "vs2026-x64-plugin",
+      "inherits": "vs2026-x64",
+      "displayName": "vs2026 x64 - plugin loader",
+      "cacheVariables": {
+        "SSO_HOST": "PLUGIN"
+      }
+    },
+    {
+      "name": "vs2022-x64-reshade",
+      "inherits": "vs2022-x64",
+      "displayName": "vs2022 x64 - reshade loader",
+      "cacheVariables": {
+        "SSO_HOST": "RESHADE"
+      }
+    },
+    {
+      "name": "vs2022-x64-asi",
+      "inherits": "vs2022-x64",
+      "displayName": "vs2022 x64 - asi loader",
+      "cacheVariables": {
+        "SSO_HOST": "ASI"
+      }
+    },
+    {
+      "name": "vs2022-x64-plugin",
+      "inherits": "vs2022-x64",
+      "displayName": "vs2022 x64 - plugin loader",
+      "cacheVariables": {
+        "SSO_HOST": "PLUGIN"
       }
     }
   ],
@@ -82,6 +131,96 @@
     {
       "name": "ninja-release",
       "configurePreset": "ninja-x64-release"
+    },
+    {
+      "name": "vs2026-reshade-release",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-reshade-debug",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-reshade-relwithdebinfo",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2026-asi-release",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-asi-debug",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-asi-relwithdebinfo",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2026-plugin-release",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-plugin-debug",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-plugin-relwithdebinfo",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2022-reshade-release",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-reshade-debug",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-reshade-relwithdebinfo",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2022-asi-release",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-asi-debug",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-asi-relwithdebinfo",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "vs2022-plugin-release",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-plugin-debug",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-plugin-relwithdebinfo",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "RelWithDebInfo"
     }
   ],
   "testPresets": [
@@ -154,6 +293,204 @@
     {
       "name": "ninja-release",
       "configurePreset": "ninja-x64-release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-reshade-release",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-reshade-debug",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-reshade-relwithdebinfo",
+      "configurePreset": "vs2026-x64-reshade",
+      "configuration": "RelWithDebInfo",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-asi-release",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-asi-debug",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-asi-relwithdebinfo",
+      "configurePreset": "vs2026-x64-asi",
+      "configuration": "RelWithDebInfo",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-plugin-release",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-plugin-debug",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2026-plugin-relwithdebinfo",
+      "configurePreset": "vs2026-x64-plugin",
+      "configuration": "RelWithDebInfo",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-reshade-release",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-reshade-debug",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-reshade-relwithdebinfo",
+      "configurePreset": "vs2022-x64-reshade",
+      "configuration": "RelWithDebInfo",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-asi-release",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-asi-debug",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-asi-relwithdebinfo",
+      "configurePreset": "vs2022-x64-asi",
+      "configuration": "RelWithDebInfo",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-plugin-release",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-plugin-debug",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    },
+    {
+      "name": "vs2022-plugin-relwithdebinfo",
+      "configurePreset": "vs2022-x64-plugin",
+      "configuration": "RelWithDebInfo",
       "output": {
         "outputOnFailure": true
       },

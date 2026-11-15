@@ -1,50 +1,77 @@
-# Architecture and maintenance
+# Architecture and maintenance — 1.2.0
 
-## Ownership of the sources
+## Source ownership
 
-This standalone project supersedes the original `work/proxy/build_proxy.cmd` build. It has no include, generator, linker or test dependency on that workspace. Historical CE source and raw profiling data remain in the original research workspace.
+This is the maintained standalone CMake project. Historical `work/proxy/` scripts and CE experiments are reference material. Building this tree has no dependency on them, the game or IDA. `data/` owns ordered hook windows, OpenGL exports, particle policy and diagnostic layout. `generated/` commits the resulting C/ASM/DEF/fixture inputs. `tools/generate_assets.py` is an offline standard-library maintenance tool, not a normal build step.
 
-`src/proxy_main.c` owns OpenGL initialization, logging and foreground hotkeys. `DllMain` only records the module and exit state. The first forwarded call runs one-time initialization, opens the absolute System32 library, resolves the committed named exports, and initializes the visibility state. The hotkey thread starts after one-time initialization releases. Other host executable names receive forwarding only.
+`src/host.c` owns logging, one controller worker, foreground input, selected preset and module lifetime. `src/presets.c` owns built-in defaults and Windows INI parsing. `src/proxy_main.c` only owns the OpenGL adapter and lazy forwarding. `src/hosts/plugin_host.cpp` is a small C++17 ReShade/ASI/explicit initialization shim. Loader contracts are in [LOADER_ADAPTERS.md](LOADER_ADAPTERS.md).
 
-`generated/gl_forwarders.asm` implements fast indirect jumps and lazy resolvers. The resolver preserves incoming GPR/SIMD arguments and the original stack layout. `data/opengl-exports.json` owns export names and ordinals; `generated/opengl32.def` is the DLL's entire public export surface. Project helper symbols are not DLL exports.
+`src/visibility/visibility_runtime.c` owns build/layout validation, unique executable-section AOB searches, near thunks, patch ownership, restore and recovery. It includes `classifier.inc`, also compiled into the classifier test bridge. `Q`, `D`, `B` are functions rather than nested macros, retaining the fix established in the original CE investigation. `ProxyHideActor`, `ProxyHideVisual`, `ProxyHideParticles` and `ProxyHideFlag` guard memory reads with SEH and fall back to native behavior on exceptions.
 
-`src/visibility/visibility_runtime.c` owns build/layout validation, unique executable-section AOB lookup, local ownership checks, near-thunk allocation, patching, F6 restore, pass-through failures and retained recovery state. `src/visibility/classifier.inc` owns config/cache structures and pure classification decisions. The latter is included by the production runtime and test bridge, so tests execute the same classifier. Its `Q`, `D` and `B` readers are functions on purpose; the original CE/TCC experiment found nested pointer macros unsafe.
+## Preset/config contract
 
-`src/asm/visibility_hooks.asm` contains the 18 reviewed native wrappers. It is maintained source, originally derived from the CE v5 loader. It is not regenerated on build. `data/visibility-sites.json` owns ordered AOB windows, call offsets and native target RVAs. `generated/hook_specs.inc` binds that order to `HideHook_0` through `HideHook_17`. Change the data, wrapper mapping, fixture and tests together.
+The master starts off. Common initialization applies DefaultPreset **8**, overriding the classifier's historical fixture initialization. Preset 8 selects only remote horses, riders and pets. Preset 9 selects only remote horses/riders. Preset 0 is always all 14 switches on with gameplay protection off. Presets 1–9 may be changed in the INI; their built-in progression and all key semantics are in the user guide.
 
-## Runtime constraints
+`VisibilityApplyOptions` temporarily clears master active, writes all switches and protection policy, advances the classifier epoch when prepared, then restores the previous master state with a memory barrier. The runtime's `g_epoch` is the source of truth; callers must not independently increment the config epoch. A changed protection policy must invalidate previous cached KEEP/hide results. Epochs are bounded to 65535 because cache entries store them in the upper 16 bits; exhaustion refuses another change and requests restart. No large cache clearing is needed at preset selection.
 
-The supported client is 645.348067, timestamp `6AEB5BD3`, image size `014AF000`. The current signatures scan rather than using patch RVAs directly, but native target RVAs, object offsets, registry globals, vtables and config layout are still build-specific. A mismatched layout refuses visibility activation. The build does not require any client file.
+Config is **368 bytes**, statically asserted, with counters still at 256. `data/runtime-layout.json` mirrors the diagnostic schema:
 
-All flags start at 1 and the master starts off. F5 enables the selected categories. F6 switches decisions to native behavior first and restores only exact owned/original windows. Unknown external changes are not overwritten. Code allocations, cached state and DLL remain mapped until process exit so an in-flight wrapper cannot enter freed code. A failed partial patch retains state for F6 recovery.
+| Offset | Field |
+|---|---|
+| 0 | active byte |
+| 16–29 | 14 hide bytes, order below |
+| 30 | ProtectGameplay byte |
+| 64 / 72 / 80 / 88 | image base / registry global address / local reference address / cache allocation |
+| 96 / 100 | cache capacity / epoch (uint32) |
+| 104–199 | original 12 uint64 vtable pointers |
+| 200 / 208 / 216 | quest item / trigger / visibility trigger vtables |
+| 224–255 | padding |
+| 256–367 | 14 uint64 hit counters |
 
-Near-game thunks contain absolute DLL addresses, allowing the DLL to load beyond signed 32-bit CALL range. Patching prepares allocations before pausing threads, bounds retries, checks instruction pointers and context bytes, changes only the five-byte CALLs, flushes the instruction cache and resumes handles in cleanup. Suspension is not a complete synchronization proof; live engine lifecycle behavior remains unverified.
+Category indexes 0–13 are PlayerHorses, PlayerActors, PlayerPets, NpcPets, NpcActors, NpcHorses, StandaloneHorses, SaleHorses, Coins, QuestMarkers, NpcText, AmbientParticles, AllParticles, DetailGrass. Keep the INI key array, config, assembly byte offsets, layout JSON, test bridge and diagnostics in sync. The old 1.1 config was 344 bytes with 11 counters; its private addresses are incompatible.
 
-The user's own rider, horse and pets are excluded by ownership/control and ancestry checks. NPC human/horse/animal classes often share `CPXQuestControl`, so those category splits use a documented engine-name heuristic. Checkpoint ancestors are protected. Selected rendering/animation is skipped; world file streaming, actor creation, arbitrary scenery and all quest/gameplay processing are not disabled.
+Registry records are 64 bytes: generation at +44, object pointer +32, hierarchy parent index +40, compact name +24 with external-name flag +31. The external pointer is decoded as Q(record,+24)<<1; reads are bounded. Object safe reference at +128/+132 must match the record generation/index. Actor+96 is not the hierarchy parent. Parent sentinel is 0x0BADF00D; ancestry depth is capped at 32, with invalid/cyclic chains kept native.
 
-## Build decisions
+Local ownership is recognized by player types/control bit +144 &4 and owner safe references (horse +152, pet +584); local horse safe reference on player is +1608. Own bodies and checkpoint ancestry remain protected independently of aggressive preset policy. Other NPC animal/horse categories use name boundaries because CPXQuestControl covers multiple species. The cache validates generation, parent, selected root generation/parent/vtable and protection of the current ancestor chain. Player ownership paths remain uncached.
 
-Use C17, MSVC and x64 MASM. Keep target flags in `cmake/CompilerOptions.cmake`; avoid global flag-string replacements. `/MT` is used for Release/RelWithDebInfo and `/MTd` for Debug. Static CRT thread notifications remain enabled. x64 ASLR and NX compatibility are retained. Incremental linking is off so link-map symbols identify actual entries for diagnostics and emulation. Release/RelWithDebInfo use linker dead-code elimination/folding.
+## Particle decisions
 
-Tests enable `assert` in their own translation units even for Release: the native harness has intentional assertion side effects. Do not remove that override. The shipping DLL is compiled separately without `SSO_PROXY_TESTING`; synthetic failure injection and test accessors are not in it. A per-target MSBuild property disables unrelated user-wide vcpkg auto-linking; the project has no external native library dependency.
+Ambient filtering accepts only exact case-insensitive names from `data/particle-policy.json`. It then validates the object's registry identity and bounded ancestry, excluding player/horse/pet/NPC/sale roots and known gameplay types/name tokens. Unknown generic particle names stay native. Ambiguous pointers/read failures stay native. It does not allocate, write actor objects, or call game functions.
 
-`tools/build.ps1` discovers installed C++ toolchains with `vswhere`. VS 2026 requires CMake 4.2; VS 2022 uses the project's 3.25 minimum. No compiler version/edition path is embedded. `CMakePresets.json` supplies explicit generators and x64 architecture. Ninja requires an already configured x64 Developer Command Prompt.
+AllParticles takes precedence over ambient. With ProtectGameplay=0 it selects every recognized CPXParticleSystemEx / CPXParticleSystem emitter without registry/name traversal. This is the explicit broad mode; it may remove race/quest cues, fog and own cosmetics. With protection on, it checks ancestry for known gameplay types/tokens but permits unknown particle names. These particle decisions are not cached. Existing category visual hooks can also suppress particle children owned by selected actor categories; the new filter adds emitter-specific suppression independent of actor selection.
 
-`tools/write_metadata.ps1` runs after each link, reads that DLL/map, calculates SHA256 and records current symbol RVAs and the hook plan. It uses .NET hashing rather than module auto-loading, which can vary inside MSBuild's PowerShell environment. `tools/read-proxy-state.ps1` checks the installed DLL hash and loaded header before reading private offsets. Keep metadata with its matching DLL; never reuse the old v1 `g_config` RVA. Call counters are not on-screen actor counts or FPS measurements.
+ProtectGameplay adds quest-item, collectible, trigger, visibility-trigger and conservative name-token checks to the original actor/visual ancestry classification. Default presets 5–9 also leave Coins, QuestMarkers and NpcText off. DetailGrass only skips a typed viewport draw helper; it does not modify terrain collision. Gameplay protection is a heuristic, not a proof that every asset's meaning was recovered.
 
-## Updating a game layout
+## Hook ABI and patching
 
-1. Record the new executable identity and retain an unmodified baseline. Disable all older CE entries and remove the proxy while collecting a new baseline.
-2. Use the official IDA MCP to reopen the new client database. Start from the same native update roles and the disassembly in the historical handoffs. Verify CALL signatures, self registers, return types, argument/stack use, native targets, local ownership checks and registry ancestry. Do not assume an AOB match proves semantic compatibility.
-3. Update the PE guards, local safe-reference/global/vtable offsets and classifier layout checks only after confirming them. Keep own-actor protection and generation validation. Registry record parent is +40; actor+96 is not its hierarchy parent.
-4. Update ordered `data/visibility-sites.json`, the matching assembly wrappers and the committed synthetic fixture. The small existing fixture represents the old layout and cannot validate a different client automatically.
-5. Run the offline generator and freshness check. Build Release and Debug, run native and classifier tests, then enable the linked assembly tests. Inspect the rebuilt export table and metadata, and package the exact outputs tested.
-6. Have the user verify local visibility, each category, F6 restoration, scene transitions and actual gameplay. Measure FPS with consistent settings/foreground state before claiming a performance benefit.
+There are **21 ordered hooks**. `visibility-sites.json` order maps to HideHook_0..20 and g_originals[0..20]. The original 18 wrappers retain their mappings. New hooks:
 
-For the baseline, Config is 344 bytes: active at 0, category flags 16..26, cache base 88, capacity 96, epoch 100, vtables 104..199 and counters 256..343. Static assertions protect the config/counter layout. Hook category semantics and ABI details are in the full historical handoffs.
+| Index | Site RVA | Kind / destination |
+|---|---|---|
+| 18 | 0x10AEC0 | Extended particle entry E9; native continuation entry+5, child dispatcher 0xB3390 |
+| 19 | 0x1129F8 | Legacy particle visual-gate CALL; native target 0xCF220 |
+| 20 | 0x24158E | Detail-grass void helper CALL; native target 0x2415D0 |
 
-## Validation boundaries
+Most sites replace only a five-byte E8 CALL. Hook 18 replaces one complete five-byte instruction `48 89 5C 24 08` with E9. Preparation validates its full 179-byte function window and final native child-tail-jump destination. Signature/backup buffers support up to 256 bytes, but only five bytes are written. No instruction splitting or generic trampoline decoder is used.
 
-The standard CTest suite runs helper processes only. The runtime suite modifies its own synthetic PE allocation and suspends/resumes one of its own helper threads. The forwarding suite loads the proxy before the real OpenGL library, compares 368 names/ordinals and checks four contextless calls. The classifier suite executes 81 cases in host-owned fixtures. Optional Unicorn tests execute actual linked assembly with modeled helper results at two image bases.
+HideHook_18 has a Windows unwind frame: subtract RSP by 0xC8, `.allocstack`, `.endprolog`. When filtering is needed it saves volatile GPRs and XMM0–5 around the C decision. Native passthrough writes RBX to `[allocated RSP+0xD0]` (original RSP+8), replays the stolen instruction, restores RSP and tail-jumps to entry+5. Hidden path restores arguments/RSP and tail-jumps to native child dispatcher 0xB3390 **once**. Both destinations receive the native entry stack, return address, nonvolatile registers and stack arguments. The home-space write happens before the epilogue's stack restore so unwind metadata remains valid. Incoming condition flags are not an entry-call contract.
 
-No test launches, injects into, plays, patches or even opens `SSOClient.exe`. Native driver-context creation, live proxy gameplay and controlled FPS remain separate integration work. A fresh source archive build is a portability test, not a game integration result.
+HideHook_19 first runs the native gate, preserves native false, and only forces AL=0 for a selected emitter. The caller's original children path remains. HideHook_20 has a matching unwindable save frame and either tail-calls the original void helper or returns with restored arguments/stack. The new Ex/grass wrappers have direct inactive/flag-off fast paths; the original wrappers keep their established ABI handling. Tests model volatile helper clobbers, SIMD arguments, stack arguments, original gate results and far relocation.
+
+Near-game 16-byte `FF 25 [rip+0]` thunks hold absolute DLL wrapper addresses, allowing a DLL outside signed rel32 range. Actual patched sites point to those near thunks. g_originals[18] uniquely stores entry+5; g_particleChildren separately stores base+0xB3390. Do not treat every g_originals entry as a full native function entry.
+
+F5 checks client headers, local player/horse layout, all unique signatures and native destinations before allocating/preparing. It allocates cache/thunks before pausing other threads, then bounds retries, checks instruction pointers and entire saved context windows, changes page protection, writes five bytes, flushes the instruction cache and resumes handles on all cleanup paths. F6 sets master off first and restores only exact owned/original bytes. Unknown modifications are never overwritten. Exceptional partial writes retain recovery state. Thread suspension is not a complete synchronization proof.
+
+Code/thunks/cache and active game host module remain allocated/pinned until exit. A per-process named mutex prevents multiple adapters patching the same process. DllMain does no patching, waiting, INI parsing, logging or registration. Explicit stop joins the input worker outside DllMain, then restores. System OpenGL is loaded from the absolute Windows directory and separately pinned. The public proxy export surface remains 368 OpenGL exports; private diagnostic symbols are map entries, not exports.
+
+## Build, evidence and update repair
+
+Use MSVC C17, C++17 only for adapters, x64 MASM, /MT or /MTd, ASLR and NX. Incremental linking is off so maps identify real linked code. Test translation units explicitly retain assert even in Release; some assertions intentionally perform harness actions. Shipping code must never define SSO_PROXY_TESTING. Per-target settings disable unrelated user-wide vcpkg autolinking. Normal builds perform no downloads.
+
+Each link writes filename/hash/header-bound symbol metadata using its own map. `read-proxy-state.ps1` selects that filename/hash, verifies loaded headers, and knows E9 entry ownership versus E8 native calls. Never reuse old g_config RVAs across builds or assume matching source implies matching DLL bytes. Counters are diagnostic calls, not on-screen objects or time measurements.
+
+Client baseline: 645.348067, timestamp 6AEB5BD3, image size 014AF000, SHA256 `3cec805521c70b64f1a33c5a0efa67679b8112dacbe9594ab1b47301b4d3de8d`. Registry/global and vtable RVAs remain build-specific. AOB scanning tolerates relocation but this release deliberately refuses a different object layout; do not remove guards to claim automatic update support.
+
+For a new client, retain clean executable identity, reopen its database via official IDA MCP, and follow [the journal's repair checklist](JOURNAL.md). Verify roles, gates, self registers, return types, child tail, stolen instruction, object fields and cleanup paths, not just byte matches. Update guards and canonical data together with wrappers/fixtures/tests. Regenerate assets; build native/classifier/assembly suites; package matching DLL/INI/metadata. User visual/restoration/transitions/race checks and a controlled foreground performance trace are separate required evidence before claiming a live improvement.
+
+Read-only IDA exports and exact patch plans are in `docs/research/particles/`. No complete executable or database is bundled. [BUILD_VALIDATION.md](BUILD_VALIDATION.md) distinguishes tested helper behavior from the earlier live 1.1 capture and still-unverified 1.2 behavior.

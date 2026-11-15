@@ -11,14 +11,16 @@ typedef struct {
 typedef struct {
     volatile U8 active;
     U8 pad[15];
-    volatile U8 hide[11];
-    U8 pad2[37];
+    volatile U8 hide[14];
+    volatile U8 protectGameplay;
+    U8 pad2[33];
     U64 base, registryAddress, localRefAddress, cacheAddress;
     U32 capacity, epoch;
     U64 mesh, skin, particleEx, particle, playerSSO, playerTP, horse, pet;
     U64 npc, sale, collect, checkpoint;
-    U8 pad3[56];
-    volatile U64 hits[11];
+    U64 questItem, trigger, visibilityTrigger;
+    U8 pad3[32];
+    volatile U64 hits[14];
 } Config;
 Config g_config;
 #define CFG_ADDRESS ((U64)&g_config)
@@ -32,6 +34,9 @@ static U8 B(U64 p,U32 o) {return *(volatile U8 *)(p+o);}
 enum { PLAYER_HORSE=1, PLAYER=2, PLAYER_PET=3, NPC_ANIMAL=4,
        NPC=5, NPC_HORSE=6, STANDALONE=7, SALE=8, COINS=9, MARKER=10,
        TEXT=11, KEEP=255 };
+enum { AMBIENT_PARTICLES=11, ALL_PARTICLES=12, DETAIL_GRASS=13, CATEGORY_COUNT=14 };
+
+#include "particle_policy.inc"
 
 static U8 lower(U8 c) { return c>='A'&&c<='Z' ? c+32 : c; }
 static int letter(U8 c) { c=lower(c); return c>='a'&&c<='z'; }
@@ -58,6 +63,30 @@ static const char *name(U64 record,int *limit) {
     }
     *limit=7;return (const char *)(record+24);
 }
+static int exactName(const char *s,int limit,const char *literal) {
+    int i;
+    for(i=0;i<limit;i++) {
+        if(!literal[i])return !s[i];
+        if(!s[i]||lower((U8)s[i])!=(U8)literal[i])return 0;
+    }
+    return 0; /* A truncated/unbounded name must never match. */
+}
+static int containsName(const char *s,int limit,const char *literal) {
+    int i,j;
+    for(i=0;i<limit&&s[i];i++) {
+        for(j=0;literal[j]&&i+j<limit&&s[i+j]&&lower((U8)s[i+j])==(U8)literal[j];j++);
+        if(!literal[j])return 1;
+    }
+    return 0;
+}
+static int gameplayNode(U64 record,U64 vt) {
+    int limit;const char *s;U32 i;
+    if(vt==C->checkpoint||vt==C->questItem||vt==C->collect||vt==C->trigger||vt==C->visibilityTrigger)return 1;
+    s=name(record,&limit);if(!s)return 1;
+    for(i=0;i<sizeof(gameplayNameTokens)/sizeof(gameplayNameTokens[0]);i++)
+        if(containsName(s,limit,gameplayNameTokens[i]))return 1;
+    return 0;
+}
 static U64 resolve(U64 begin,U64 count,U64 ref) {
     U32 i=D(ref,12); U64 rec;
     if(i>=count) return 0;
@@ -82,6 +111,7 @@ static int protectedRoot(U64 begin,U64 count,U32 index) {
         record=begin+((U64)index<<6);ptr=Q(record,32);
         if(!ptr||D(ptr,132)!=index||D(ptr,128)!=D(record,44))return 1;
         vt=Q(ptr,0);
+        if(C->protectGameplay&&gameplayNode(record,vt))return 1;
         if(vt==C->checkpoint)return 1;
         if((vt==C->playerSSO||vt==C->playerTP||vt==C->horse||vt==C->pet)&&(B(ptr,144)&4))return 1;
         if(vt==C->horse||vt==C->pet) {
@@ -121,6 +151,7 @@ static U32 role(U64 actor) {
         if(!ptr)return KEEP;
         if(D(ptr,132)!=current||D(ptr,128)!=D(record,44))return KEEP;
         vt=Q(ptr,0);
+        if(C->protectGameplay&&gameplayNode(record,vt)){candidate=KEEP;break;}
         /* Check ownership even after a category is found in a descendant. */
         if(vt==C->playerSSO||vt==C->playerTP) {
             cacheable=0;
@@ -174,8 +205,43 @@ int SSO5_visual(U64 actor) {
     return hideRole(role(actor));
 }
 int SSO5_flag(U32 index) {
-    if(!C->active||index>=11||C->hide[index]!=1)return 0;
+    if(!C->active||index>=CATEGORY_COUNT||C->hide[index]!=1)return 0;
     C->hits[index]++;return 1;
+}
+/* Only the emitter's own work is suppressed. Hook adapters retain children. */
+int SSO5_particles(U64 actor) {
+    U64 registry,begin,end,count,record,ptr,vt,current;
+    U32 index,depth,i;int limit,allowed=0,broad;const char *s;
+    if(!C->active||(!C->hide[AMBIENT_PARTICLES]&&!C->hide[ALL_PARTICLES])||!actor)return 0;
+    vt=Q(actor,0);if(vt!=C->particleEx&&vt!=C->particle)return 0;
+    broad=C->hide[ALL_PARTICLES]==1;
+    if(broad&&!C->protectGameplay){C->hits[ALL_PARTICLES]++;return 1;}
+    registry=Q(C->registryAddress,0);if(!registry)return 0;
+    begin=Q(registry,0);end=Q(registry,8);
+    if(!begin||end<begin||end-begin>0x10000000ULL||((end-begin)&63))return 0;
+    count=(end-begin)>>6;index=D(actor,132);if(index>=count)return 0;
+    record=begin+((U64)index<<6);
+    if(Q(record,32)!=actor||D(record,44)!=D(actor,128))return 0;
+    if(!broad) {
+        s=name(record,&limit);if(!s)return 0;
+        for(i=0;i<sizeof(ambientParticleNames)/sizeof(ambientParticleNames[0]);i++)
+            if(exactName(s,limit,ambientParticleNames[i])){allowed=1;break;}
+        if(!allowed)return 0;
+    }
+    current=index;
+    for(depth=0;depth<32;depth++) {
+        if(current==0x0BADF00D) {
+            C->hits[broad?ALL_PARTICLES:AMBIENT_PARTICLES]++;return 1;
+        }
+        if(current>=count)return 0;
+        record=begin+(current<<6);ptr=Q(record,32);
+        if(!ptr||D(ptr,132)!=current||D(ptr,128)!=D(record,44))return 0;
+        vt=Q(ptr,0);
+        if(gameplayNode(record,vt))return 0;
+        if(!broad&&(vt==C->playerSSO||vt==C->playerTP||vt==C->horse||vt==C->pet||vt==C->npc||vt==C->sale))return 0;
+        index=D(record,40);if(index==current)return 0;current=index;
+    }
+    return 0;
 }
 /* Kept as exports to let the isolated harness verify the real compiled layout. */
 int SSO5_sizeof_config(void) {return sizeof(Config);}

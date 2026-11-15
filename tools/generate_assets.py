@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def assets():
     gl = json.loads((ROOT / "data/opengl-exports.json").read_text(encoding="utf-8"))["exports"]
     sites = json.loads((ROOT / "data/visibility-sites.json").read_text(encoding="utf-8"))
-    assert len(gl) == 368 and len(sites) == 18
+    assert len(gl) == 368 and len(sites) == 21
     assert len({x["name"] for x in gl}) == len({x["ordinal"] for x in gl}) == len(gl)
     output = {}
     output["opengl32.def"] = "LIBRARY opengl32\nEXPORTS\n" + "".join(
@@ -48,10 +48,12 @@ def assets():
         pattern = site["pattern"].split()
         window = bytes.fromhex(site["window"])
         offset = site["patch_offset"]
-        assert len(pattern) == len(window) <= 64 and offset + 5 <= len(window)
-        assert site["patch_length"] == 5 and window[offset] == 0xE8
+        assert len(pattern) == len(window) <= 256 and offset + 5 <= len(window)
+        assert site["patch_length"] == 5
+        entry = site.get("kind") == "particle_entry"
+        assert window[offset:offset+5] == bytes.fromhex("48 89 5C 24 08") if entry else window[offset] == 0xE8
         assert int(site["rva"], 16) + offset == int(site["patch_rva"], 16)
-        target = int(site["patch_rva"], 16) + 5 + int.from_bytes(window[offset+1:offset+5], "little", signed=True)
+        target = (int(site["rva"],16)+len(window)+int.from_bytes(window[-4:],"little",signed=True)) if entry else (int(site["patch_rva"], 16) + 5 + int.from_bytes(window[offset+1:offset+5], "little", signed=True))
         assert target == int(site["target_rva"], 16)
         assert all(token == "??" or int(token, 16) == byte for token, byte in zip(pattern, window))
         hooks += [f"static const BYTE pat_{i}[]={{" + ",".join("0" if x == "??" else "0x" + x for x in pattern) + "};",
@@ -59,13 +61,21 @@ def assets():
                   f"extern void HideHook_{i}(void);"]
     hooks += ["static const HookSpec g_specs[HOOK_COUNT]={"]
     for i, (name, site) in enumerate(sites.items()):
-        hooks += ['{"%s",pat_%d,mask_%d,sizeof(pat_%d),%d,%s,(void*)HideHook_%d},' %
-                  (name, i, i, i, site["patch_offset"], site["target_rva"], i)]
+        hooks += ['{"%s",pat_%d,mask_%d,sizeof(pat_%d),%d,%s,(void*)HideHook_%d,%d},' %
+                  (name, i, i, i, site["patch_offset"], site["target_rva"], i, int(site.get("kind")=="particle_entry"))]
     output["hook_specs.inc"] = "\n".join(hooks + ["};"]) + "\n"
     wrappers = (ROOT / "src/asm/visibility_hooks.asm").read_text(encoding="utf-8")
-    assert wrappers.count(" PROC\n") == len(sites)
+    import re
+    assert len(re.findall(r"HideHook_\d+ PROC(?: FRAME)?\n",wrappers)) == len(sites)
     for i in range(len(sites)):
-        assert f"HideHook_{i} PROC\n" in wrappers
+        assert f"HideHook_{i} PROC" in wrappers
+    policy=json.loads((ROOT/"data/particle-policy.json").read_text(encoding="utf-8"))
+    output["particle_policy.inc"]="/* Generated ambient allowlist and gameplay guards. */\n"+"\n".join("static const char *"+key+"[]={"+",".join(json.dumps(x)for x in values)+"};" for key,values in [("ambientParticleNames",policy["ambient_names"]),("gameplayNameTokens",policy["protected_name_tokens"])])+"\n"
+    fixture="/* Committed baseline windows; generated from data/visibility-sites.json. */\n"
+    fixture+="\n".join(f"static const BYTE fixture_window_{i}[]={{"+",".join("0x"+v for v in site["window"].split())+"};"for i,site in enumerate(sites.values()))+"\n"
+    fixture+='typedef struct {DWORD rva,offset;const BYTE *bytes;SIZE_T length;} Fixture;\nstatic const Fixture fixture_windows[]={\n'
+    fixture+="\n".join("{%s,%d,fixture_window_%d,sizeof(fixture_window_%d)},"%(site["rva"],site["patch_offset"],i,i)for i,site in enumerate(sites.values()))+"\n};\n"
+    output["fixture_windows.inc"]=fixture
     return output
 
 
@@ -84,7 +94,7 @@ def main():
             path.write_text(content, encoding="utf-8", newline="\n")
     if stale:
         parser.exit(1, "Stale assets: " + ", ".join(stale) + "; run python tools/generate_assets.py\n")
-    print("Generated assets: " + ("fresh" if args.check else "updated") + "; 368 exports, 18 validated call sites")
+    print("Generated assets: " + ("fresh" if args.check else "updated") + "; 368 exports, 21 validated hook sites")
 
 
 if __name__ == "__main__":

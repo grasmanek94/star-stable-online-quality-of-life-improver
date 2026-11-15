@@ -1,70 +1,95 @@
-# Star Stable OpenGL visibility proxy — x64
+# SSO Visibility 1.2.0 — Windows x64
 
-`opengl32.dll` forwards Windows OpenGL and adds the visibility controls below. This guide applies to the standalone CMake project (build package version 1.1.0). Hiding starts **off**. The visibility code supports the analyzed **SSOClient 645.348067 / Stellar645** build. It scans for the hook sites and rejects a different object layout or overlapping patches.
+**Default preset 8 hides other players' riders, horses and pets. Your own remain visible.** Hiding starts off. Press F5 to enable the selected preset. The supported object layout is SSOClient **645.348067**, PE timestamp `6AEB5BD3`, image size `014AF000`.
 
-## Install and remove
+## Install
 
-1. Disable all older CE visibility entries and close the game.
-2. Copy **only `opengl32.dll`** from this package into:
+Close the game, disable previous CE visibility entries and replace the old version of this feature. Choose **one** adapter:
 
-   ```text
-   C:\Users\Rafal\Desktop\StarStableOnline\Star Stable Online\client\
-   ```
+| Adapter | Placement / prerequisite |
+|---|---|
+| `opengl32.dll` | Beside the actual `SSOClient.exe`; no separate loader needed |
+| `SSOVisibility.addon64` | In the configured addon search directory of x64 ReShade with full addon support and `AddonInit` support |
+| `SSOVisibility.asi` | In the scan directory of an x64 `InitializeASI`-capable loader; initialization must occur outside DllMain |
+| `SSOVisibility.dll` | Explicit plugin host loads it and calls the exported initialization function |
 
-   It belongs beside **`SSOClient.exe`**. Keep any existing unrelated DLL separately instead of overwriting it. None was present at this path when this package was prepared.
-3. Launch the game normally, enter the world, and press **F5** while the game is in the foreground.
-4. Press **F6** to restore the original calls and normal visibility. Native player fade-in can take a few seconds.
+Put **`SSOVisibility.ini` beside the chosen module**. For the proxy the previously used client directory was `C:\Users\Rafal\Desktop\StarStableOnline\Star Stable Online\client\`; verify the currently running executable's directory. If ReShade already supplies `opengl32.dll`, choose the addon instead of overwriting it. Do not copy these files into System32. Third-party loaders are not included or automatically installed. See `LOADER_ADAPTERS.md` for precise contracts.
 
-To remove it, close the game and remove this package's `opengl32.dll` from that directory. Do not copy anything into Windows/System32. Cheat Engine is not required for the proxy and its visibility entries must stay disabled.
+Launch normally, enter the world and press F5 in the game window. F6 restores the original patched bytes and native behavior; actor fade-in may take a few seconds. Close the game before replacing/removing a module. It is pinned until process exit to retain code for in-flight calls.
 
 ## Controls
 
-Keep **NumLock on**. These are the numeric-keypad keys, not the number row. Controls work while the game window is foreground.
+Keep **NumLock on**. These are numeric-keypad keys, not the top number row. Keys are polled while the game is foreground; the game can receive the same key presses.
 
 | Key | Action |
 |---|---|
-| **F5** | Enable hiding using the current category choices |
-| **F6** | Turn hiding off and restore the original calls |
-| **Ctrl+Numpad1** | Other players' horses |
-| **Ctrl+Numpad2** | Other players' characters |
-| **Ctrl+Numpad3** | Other players' pets |
-| **Ctrl+Numpad4** | NPC pets and ambient animals, identified by names |
-| **Ctrl+Numpad5** | NPC actors and unclassified NPC models |
-| **Ctrl+Numpad6** | NPC horses, identified by names |
-| **Ctrl+Numpad7** | Standalone riderless `CPXHorse` objects |
-| **Ctrl+Numpad8** | Buyable and display horses |
-| **Ctrl+Numpad9** | Coins and collectible visuals |
-| **Ctrl+Numpad0** | World quest question/exclamation markers |
-| **Ctrl+Numpad Decimal** | NPC floating text and speech bubbles |
+| F5 | Enable current preset; initially preset 8 |
+| F6 | Disable hiding and restore original game instructions |
+| F7 | Reload INI and apply the current preset; preserves master on/off |
+| Ctrl+Numpad0 | Select and enable every supported hiding filter; aggressive |
+| Ctrl+Numpad1–9 | Select and enable that configured preset |
 
-All category choices default to **hide=1**. A category chord flips between **1=hide** and **0=native behavior**. Choices can be changed while off, survive F6/F5, and reset when the game restarts. Keys are polled; the game can also receive the key presses.
+The old chords no longer toggle individual categories. Set individual categories in the INI. The selected preset survives F6/F5 during this process; a restart selects `[General] DefaultPreset` again. Changing DefaultPreset then pressing F7 does not change the current selection: use its Ctrl+Numpad key or restart.
 
-The user's own rider, horse and pets are excluded through ownership/control checks. No ignore list, chat handler or server population is changed. NPC models, their skeletal animation and selected visual submissions are suppressed; whole NPC/quest/checkpoint update methods are not replaced with early returns.
+## Default preset ladder
 
-## Scope and limits
+Each next preset keeps more visible; 4→5 keeps the same category switches but enables extra gameplay protection.
 
-Most ambient people, horses and animals share `CPXQuestControl`. The NPC animal/horse split therefore uses case-insensitive engine names with word/CamelCase boundaries. Unrecognized story names go into **NPC actors**, even if the model is an animal. With all three NPC choices at1 they are all selected. This is a heuristic split, not a recovered authoritative species field.
+| Preset | Default hiding |
+|---|---|
+| **0** | Every available category, including broad particles, coins, quest markers and NPC text; immutable blanket preset |
+| **1** | As 0, but keep quest markers |
+| **2** | As 1, also keep NPC floating text / speech bubbles |
+| **3** | As 2, also keep coins / collectible visuals |
+| **4** | As 3, replace broad particles with the ambient allowlist |
+| **5** | Same filters as 4, with known gameplay ancestry protected |
+| **6** | As 5, also keep NPC people / unclassified NPC models |
+| **7** | Remote riders/horses/pets, allowlisted ambient particles and detail grass only |
+| **8 — default** | Remote riders, horses and pets only |
+| **9** | Remote riders and horses only |
 
-Ambient horse models usually belong to the NPC-horse category; sale horses have their own category. The separate riderless-`CPXHorse` bucket had no active hits in the observed scene. Coins cover recognized coin/shilling visual subtrees and `CPXCollectItem` visuals. Terrain, arbitrary scenery, every particle effect and every streamed asset are not globally disabled. Checkpoint ancestors are protected by the classifier.
+Defaults **0–4 are aggressive; 5–9 are intended for ordinary gameplay**. Own bodies and checkpoint ancestors remain protected even in 0. Broad particles may hide the local player's cosmetic effects, fog and race/quest particle cues. “Everything” means all filters implemented here, not deletion of every visible world object.
 
-This does **not** prevent the city from streaming files or creating its actors. It targets selected ongoing visual/animation work. There is no measured FPS benefit yet, no full quest/race/cutscene lifecycle test, and no crash-free guarantee. Skeletal-animation-dependent NPC behavior may differ while hidden. The proxy itself has not yet been launched inside the game; validation below was in helper processes. The separate CE v5 hooks were observed executing in the game, including NPC/sale/coin/marker categories, but that is not a proxy integration test.
+Gameplay guards inspect known types and case-insensitive name tokens in ancestry. They preserve collision routines and known race/quest cues, but are not an exhaustive asset classification. NPC models may disappear while their logic and collision continue. Do not infer that an invisible model has ceased to be an obstacle.
 
-## Diagnosis
+## Configure the INI
 
-The proxy writes **`SSO-visibility-proxy.log`** beside its DLL. It records loading, F5/F6 outcomes, category choices and guarded read failures. It does not log character names, chat or credentials.
+`1=hide`, `0=native behavior`. `[General] DefaultPreset=8` selects the starting option. Edit `[Preset1]` through `[Preset9]`, save, then press F7. `[Preset0]` is ignored so Ctrl+Numpad0 always enables all supported filters. A missing INI uses built-in defaults; the runtime does not create or overwrite your file. Invalid values fall back to that key's built-in default and are logged.
 
-- No log: check that the DLL is beside the actual running `SSOClient.exe`, then restart the game. Copying into an already running process does not load it.
-- F5 reports another build: the visibility layouts need re-analysis; graphics forwarding remains separate.
-- F5 reports a signature/call mismatch: disable older CE entries, restart cleanly and inspect the exact log message.
-- F5 reports local player/horse not ready: enter the world and retry.
-- F6 reports restoration refused: it has set its switches to passthrough and retained its code/backups. Resolve another modifier and retry F6, or restart the game. Do not unload a live proxy.
+| Key | Scope |
+|---|---|
+| PlayerHorses | Other players' horses |
+| PlayerActors | Other players' rider models |
+| PlayerPets | Other players' pets |
+| NpcPets | NPC pets / ambient animals; name-based split |
+| NpcActors | NPC people and unclassified NPC models |
+| NpcHorses | NPC horse models; name-based split |
+| StandaloneHorses | Riderless `CPXHorse` objects |
+| SaleHorses | Buyable / display horse visuals |
+| Coins | Recognized coin/shilling and collectible visual subtrees |
+| QuestMarkers | World question / exclamation marker visuals |
+| NpcText | NPC floating text / speech bubbles |
+| AmbientParticles | Exact allowlisted lamp glows, dust, chimney smoke, forest particles, decorative leaves, with ancestry protection |
+| AllParticles | Broad legacy/extended particle filter; takes precedence over ambient selection |
+| DetailGrass | Viewport's detail-grass draw helper |
+| ProtectGameplay | Additional known quest/race/trigger ancestry protection; default 0 for 1–4, 1 for 5–9 |
+| Name | Label printed in the log |
 
-`read-proxy-state.ps1` is an optional **read-only** diagnostic. It verifies the installed DLL's hash before using its symbol metadata, then reads its switches, counters and native hook targets. Run it from the extracted package with PowerShell when troubleshooting; it does not activate or patch anything. Counters count calls, not players or on-screen objects.
+For example, add `AmbientParticles=1` and `DetailGrass=1` to preset 8 to try those two filters while retaining its player selections. Set `AllParticles=1` and `ProtectGameplay=0` only when you intend the broad cue-removing mode; preset 0 already does this.
 
-## Validation and source
+Most NPC animal/horse classes share `CPXQuestControl`, so names distinguish those buckets. Unknown names enter NpcActors. The standalone-horse bucket had no active hits in the earlier observed scene. The feature does not change ignore lists or chat, prevent city streaming, remove obstacles, disable whole quest updates, or suppress every rendering subsystem.
 
-The CMake source project builds this DLL with MSVC and MASM. The standard CTest suite validates all 368 OpenGL exports and contextless calls, 16 native synthetic install/restore scenarios, and (when Python is available) the 81 classifier cases and generated-asset freshness. Optional Unicorn tests execute 144 linked visibility-wrapper cases and 12 linked forwarder cases, including ASLR relocation. Release, Debug and RelWithDebInfo were checked with Visual Studio 2026 in the original workspace.
+## Troubleshooting and measurement
 
-These tests do not open or modify a running game. Live proxy/FPS verification remains outstanding. NPC species categories remain name-based heuristics, and the guarded object layout remains client 645.348067.
+`SSO-visibility.log` beside the selected module records startup, selected presets, F5/F6 and guarded read failures. Old versions used `SSO-visibility-proxy.log`. No log can mean the loader did not call initialization, the path is wrong, or the directory is unwritable. A loaded adapter in a non-SSO executable deliberately stays inactive. Only one controller can own the process.
 
-The separately distributed source ZIP has a root README, CMakeLists.txt, CMakePresets.json and build.cmd. Start with README.md and docs/ARCHITECTURE.md for building/maintenance. The earlier research is in docs/REVERSE_ENGINEERING.md and docs/SSO-Visibility-Engineering-Handoff.md; its old absolute workspace paths and DLL addresses are historical. Use the rebuilt DLL's own map and validation/proxy-symbols.json. Windows' OpenGL DLL, the game executable/database and raw traces are not included.
+- Unsupported executable layout: re-analysis is required; a signature match cannot validate new object offsets.
+- Signature/context mismatch: remove older visibility patches and restart cleanly before retrying.
+- Local player/horse not ready: enter the world and retry F5.
+- F6 restoration refused: switches have been set to passthrough; exact bytes/backups remain. Resolve conflicting modifications and retry F6, or restart. Do not force-unload the module.
+
+The packaged `read-proxy-state.ps1` optionally reads the selected preset, flags, counters and hook ownership. Keep `validation/proxy-symbols.json` with its exact matching module. It checks filename/hash and loaded headers before accessing private RVAs. Use 64-bit PowerShell. It does not patch, inject, activate, or suspend anything. Counters measure calls, not visible objects or FPS.
+
+The previous 1.1 proxy was verified active during a live foreground trace. The new 1.2 filters/adapters pass isolated native/classifier/assembly tests, but **have not been visually verified or benchmarked in the game**. The measured 0.4307 sampled ms/present particle wrapper is a research target, not a guaranteed saving. Use the same camera/area/foreground state for comparisons and include restoration, transitions, races and local-actor visibility in live checks.
+
+The source package contains build.cmd, CMake presets, all native sources and the engineering journal. No game executable, IDB, Windows OpenGL DLL, raw ETL, Cheat Engine or third-party loader is distributed.

@@ -1,0 +1,22 @@
+{
+  "config_size": 368,
+  "hits_offset": 256,
+  "protect_gameplay_offset": 30,
+  "categories": [
+    "PlayerHorses",
+    "PlayerActors",
+    "PlayerPets",
+    "NpcPets",
+    "NpcActors",
+    "NpcHorses",
+    "StandaloneHorses",
+    "SaleHorses",
+    "Coins",
+    "QuestMarkers",
+    "NpcText",
+    "AmbientParticles",
+    "AllParticles",
+    "DetailGrass"
+  ],
+  "hook_count": 21
+}

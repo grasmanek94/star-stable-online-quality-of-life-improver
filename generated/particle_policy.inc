@@ -1,0 +1,3 @@
+/* Generated ambient allowlist and gameplay guards. */
+static const char *ambientParticleNames[]={"dust_day","dust_night","forestparticles_day","forestgoldenparticles","particles_mapleleaves_a","gen_roadlantern_glow_01","gen_roadlantern_glow_1","particle_lanternglow_01_add","lanternglow","chimneysmoke"};
+static const char *gameplayNameTokens[]={"race","checkpoint","check_point","trigger","quest","collect","coin","shilling","obstacle","jump","gate","goal","start","finish","route","guide","portal","target","interaction","clue","marker","fog","mist"};

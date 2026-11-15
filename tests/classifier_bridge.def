@@ -5,3 +5,4 @@ EXPORTS
  SSO5_flag
  SSO5_sizeof_config
  SSO5_offset_hits
+ SSO5_particles

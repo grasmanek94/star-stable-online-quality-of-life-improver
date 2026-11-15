@@ -160,5 +160,33 @@
     "window": "0f 84 f5 01 00 00 48 8b cf e8 36 b6 ff ff 84 c0 0f 84 e5 01 00 00 4c 8b b7 b0 00 00 00 4c 89 75 a0 48 8b",
     "pattern": "0F 84 F5 01 00 00 48 8B CF E8 ?? ?? ?? ?? 84 C0 0F 84 E5 01 00 00 4C 8B B7 B0 00 00 00 4C 89 75 A0 48 8B",
     "patch_length": 5
+  },
+  "particleExEntry": {
+    "rva": "0x10aec0",
+    "patch_offset": 0,
+    "patch_rva": "0x10aec0",
+    "target_rva": "0xb3390",
+    "kind": "particle_entry",
+    "patch_length": 5,
+    "window": "48 89 5c 24 08 48 89 74 24 10 57 48 83 ec 30 49 8b f8 48 8b f2 48 8b d9 e8 63 a5 fa ff 4c 8b c0 48 8d 54 24 20 48 8b cb e8 63 17 fc ff f3 0f 10 87 44 01 00 00 f3 0f 10 97 40 01 00 00 f3 0f 10 8f 48 01 00 00 f3 0f 5c 10 f3 0f 5c 40 04 f3 0f 5c 48 08 f3 0f 59 d2 f3 0f 59 c0 f3 0f 59 c9 f3 0f 58 d0 0f 57 c0 f3 0f 58 d1 0f 2e c2 77 09 0f 57 c0 f3 0f 51 c2 eb 08 0f 28 c2 e8 c0 57 8f 00 4c 8b c7 f3 0f 11 83 b8 04 00 00 48 8b d6 48 8b cb e8 2a 00 00 00 4c 8b c7 48 8b d6 48 8b cb 48 8b 5c 24 40 48 8b 74 24 48 48 83 c4 30 5f e9 1d 84 fa ff",
+    "pattern": "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 49 8B F8 48 8B F2 48 8B D9 E8 63 A5 FA FF 4C 8B C0 48 8D 54 24 20 48 8B CB E8 63 17 FC FF F3 0F 10 87 44 01 00 00 F3 0F 10 97 40 01 00 00 F3 0F 10 8F 48 01 00 00 F3 0F 5C 10 F3 0F 5C 40 04 F3 0F 5C 48 08 F3 0F 59 D2 F3 0F 59 C0 F3 0F 59 C9 F3 0F 58 D0 0F 57 C0 F3 0F 58 D1 0F 2E C2 77 09 0F 57 C0 F3 0F 51 C2 EB 08 0F 28 C2 E8 C0 57 8F 00 4C 8B C7 F3 0F 11 83 B8 04 00 00 48 8B D6 48 8B CB E8 2A 00 00 00 4C 8B C7 48 8B D6 48 8B CB 48 8B 5C 24 40 48 8B 74 24 48 48 83 C4 30 5F E9 1D 84 FA FF"
+  },
+  "particleLegacyGate": {
+    "rva": "0x1129f0",
+    "patch_offset": 8,
+    "patch_rva": "0x1129f8",
+    "target_rva": "0xcf220",
+    "patch_length": 5,
+    "window": "44 0f 29 b8 18 ff ff ff e8 23 c8 fb ff 84 c0 0f 84 46 13 00 00 4c 8b 8f d0 00 00 00 4c 8d a7 c8 00 00 00 4d 8b 04 24 45 33 ed 49 ba 25 49 92 24",
+    "pattern": "44 0F 29 B8 18 FF FF FF E8 ?? ?? ?? ?? 84 C0 0F 84 46 13 00 00 4C 8B 8F D0 00 00 00 4C 8D A7 C8 00 00 00 4D 8B 04 24 45 33 ED 49 BA 25 49 92 24"
+  },
+  "detailGrass": {
+    "rva": "0x241584",
+    "patch_offset": 10,
+    "patch_rva": "0x24158e",
+    "target_rva": "0x2415d0",
+    "patch_length": 5,
+    "window": "0e 4d 8b c6 48 8b d6 48 8b cf e8 3d 00 00 00 c6 87 ac 00 00 00 00 4c 8b c6 49 8b d6 48 8b cf e8 e8 1d e7 ff 48 8b 8c 24",
+    "pattern": "0E 4D 8B C6 48 8B D6 48 8B CF E8 ?? ?? ?? ?? C6 87 AC 00 00 00 00 4C 8B C6 49 8B D6 48 8B CF E8 E8 1D E7 FF 48 8B 8C 24"
   }
 }

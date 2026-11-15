@@ -28,14 +28,14 @@ vts={name:0x140000000+(i+1)*4096 for i,name in enumerate(vt_names)}
 for i,name in enumerate(vt_names):put(cfg+104+i*8,'<Q',vts[name])
 src=(ROOT/'src/visibility/classifier.inc').read_text(encoding='utf-8')
 functions={}
-for name in ['actor','visual','flag']:
+for name in ['actor','visual','flag','particles']:
     fn=getattr(native_dll,'SSO5_'+name);fn.argtypes=[ct.c_uint64];fn.restype=ct.c_int
     functions[name]=fn
 
 def layout(name):
     return getattr(native_dll,'SSO5_'+name)()
 
-assert layout('sizeof_config')==344 and layout('offset_hits')==256
+assert layout('sizeof_config')==368 and layout('offset_hits')==256
 cases=[];next_index=0
 def actor(kind,name='',parent=None,local=False):
     global next_index
@@ -102,6 +102,44 @@ child=actor('skin','Pelvis',rp);only(2);check('remote pet before owner change',f
 ref(rp[0],584,local);check('pet owner becomes local without generation change',functions['visual'](child[0]),0)
 ct.memset(cfg+16,1,11)
 put(records+rp[1]*64+44,'<I',99999);check('generation mismatch rejected',functions['actor'](rp[0]),0)
+# Particle filtering is independent of actor-category hiding.
+for name,offset in [('questItem',200),('trigger',208),('visibilityTrigger',216)]:
+    vts[name]=0x160000000+offset;put(cfg+offset,'<Q',vts[name])
+def fresh_guard(value):
+    put(cfg+30,'<B',value);put(cfg+100,'<I',get(cfg+100,'<I')+1)
+def particle_flags(ambient=0,broad=0):
+    ct.memset(cfg+16,0,14);put(cfg+27,'<BB',ambient,broad)
+put(cfg,'<B',1);fresh_guard(0)
+neutral=actor('other','Environment')
+p=actor('particleEx','Dust_Day',neutral)
+particle_flags();check('particles default off',functions['particles'](p[0]),0)
+particle_flags(1);check('ambient allowlisted particle',functions['particles'](p[0]),1)
+for kind,name,expected in [('particle','DUST_DAY',1),('particleEx','Dust_DayExtra',0),('particleEx','NotDust_Day',0),('particleEx','Smoke',0),('mesh','Dust_Day',0),('particleEx','QuestItemParticleSystem',0)]:
+    item=actor(kind,name,neutral);check('ambient exact class/name '+kind+' '+name,functions['particles'](item[0]),expected)
+for kind,name in [('other','RaceObstacle'),('other','FogVolume'),('other','QuestMarkers'),('questItem','Object'),('trigger','Object'),('visibilityTrigger','Object'),('checkpoint','Object'),('collect','Object'),('npc','Person'),('playerSSO','Remote'),('horse','Horse')]:
+    root=actor(kind,name,neutral);item=actor('particleEx','Dust_Day',root)
+    check('ambient ancestor protection '+kind+' '+name,functions['particles'](item[0]),0)
+item=actor('particleEx','Dust_Day',neutral);put(records+item[1]*64+44,'<I',999999)
+check('ambient invalid generation stays native',functions['particles'](item[0]),0)
+item=actor('particleEx','Dust_Day',neutral);put(records+item[1]*64+40,'<I',item[1])
+check('ambient parent cycle stays native',functions['particles'](item[0]),0)
+longroot=neutral
+for i in range(34):longroot=actor('other','Group',longroot)
+item=actor('particleEx','Dust_Day',longroot);check('ambient bounded ancestry',functions['particles'](item[0]),0)
+particle_flags(0,1)
+for kind,name,expected in [('particleEx','QuestItemParticleSystem',1),('particle','ParticleSystem',1),('skin','ParticleSystem',0)]:
+    item=actor(kind,name,neutral);check('broad exact particle class '+kind,functions['particles'](item[0]),expected)
+fresh_guard(1);item=actor('particleEx','QuestItemParticleSystem',neutral)
+check('broad optional gameplay guard',functions['particles'](item[0]),0)
+item=actor('particleEx','ParticleSystem',neutral);check('broad guarded unknown ambient name',functions['particles'](item[0]),1)
+fresh_guard(0);ct.memset(cfg+16,0,14);put(cfg+20,'<B',1)
+race_npc=actor('npc','RaceObstacle',neutral);mesh=actor('skin','Model',race_npc)
+check('aggressive NPC visuals',functions['visual'](mesh[0]),1)
+fresh_guard(1);check('normal preset protects race NPC',functions['visual'](mesh[0]),0)
+questroot=actor('questItem','Thing',neutral);npc=actor('npc','TownPerson',questroot);mesh=actor('skin','Model',npc)
+check('normal preset protects quest item ancestry',functions['visual'](mesh[0]),0)
+ct.memset(cfg+16,0,14);put(cfg+29,'<B',1);check('detail grass flag',functions['flag'](13),1)
+put(cfg,'<B',0);check('particle master passthrough',functions['particles'](p[0]),0)
 report={'status':'pass','case_count':len(cases),'cases':cases,'source_sha256':hashlib.sha256(src.encode()).hexdigest(),'compiled_config_bytes':layout('sizeof_config'),'hits_offset':layout('offset_hits'),'method':'Actual shared classifier built by CMake/MSVC; host-owned fixture memory only','limits':['No game-process writes','No FPS result or full gameplay lifecycle test','Name-based NPC categories are heuristic']}
 args.report.parent.mkdir(parents=True,exist_ok=True)
 args.report.write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')

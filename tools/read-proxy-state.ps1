@@ -9,10 +9,10 @@ if(-not $MetadataPath){
 $meta=Get-Content -Raw -LiteralPath $MetadataPath | ConvertFrom-Json
 $game=Get-Process -Name SSOClient | Select-Object -First 1
 $clientPath=$game.MainModule.FileName
-$expected=Join-Path ([IO.Path]::GetDirectoryName($clientPath)) 'opengl32.dll'
-$proxy=@($game.Modules | Where-Object {$_.FileName -ieq $expected})
-if($proxy.Count -ne 1){throw 'The application-directory OpenGL proxy is not loaded in this SSOClient process.'}
-if((Get-FileHash -LiteralPath $expected -Algorithm SHA256).Hash -ine $meta.dll_sha256){throw 'DLL hash differs from this metadata; regenerate symbols before reading private offsets.'}
+$moduleName=if($meta.module_name){$meta.module_name}else{'opengl32.dll'}
+$proxy=@($game.Modules | Where-Object {$_.ModuleName -ieq $moduleName -and (Get-FileHash -LiteralPath $_.FileName -Algorithm SHA256).Hash -ieq $meta.dll_sha256})
+if($proxy.Count -ne 1){throw 'Exactly one module matching the metadata filename/hash must be loaded; regenerate metadata for a rebuilt module.'}
+$expected=$proxy[0].FileName
 if(-not('SsoProxyStateRead' -as [type])){
  Add-Type -TypeDefinition @'
 using System;using System.Runtime.InteropServices;
@@ -33,21 +33,22 @@ try{
  $base=$game.MainModule.BaseAddress.ToInt64();$dllBase=$proxy[0].BaseAddress.ToInt64()
  $nt=$dllBase+(ReadProxyUInt32 ($dllBase+0x3C))
  if((ReadProxyUInt32 ($nt+8)) -ne (ParseProxyHex $meta.dll_pe_timestamp) -or (ReadProxyUInt32 ($nt+24+56)) -ne (ParseProxyHex $meta.dll_image_size)){throw 'Loaded DLL headers do not match the symbol metadata.'}
- $cfgAddress=$dllBase+(ParseProxyHex $meta.symbols.g_config.rva);$cfg=ReadProxyBytes $cfgAddress 344
+ $cfgAddress=$dllBase+(ParseProxyHex $meta.symbols.g_config.rva);$cfg=ReadProxyBytes $cfgAddress $meta.config_size
  $prepared=[BitConverter]::ToInt64($cfg,64)
  if($prepared -ne 0 -and $prepared -ne $base){throw 'Config image pointer does not match the running client.'}
- $categories=@();for($i=0;$i -lt 11;$i++){$categories+=[ordered]@{Name=$meta.categories[$i];Hide=[int]$cfg[16+$i];NativeHideCalls=[BitConverter]::ToUInt64($cfg,256+8*$i)}}
+ $categories=@();for($i=0;$i -lt $meta.categories.Count;$i++){$categories+=[ordered]@{Name=$meta.categories[$i];Hide=[int]$cfg[16+$i];NativeHideCalls=[BitConverter]::ToUInt64($cfg,256+8*$i)}}
  $gameNt=$base+(ReadProxyUInt32 ($base+0x3C));$known=(ReadProxyUInt32 ($gameNt+8)) -eq 0x6AEB5BD3 -and (ReadProxyUInt32 ($gameNt+24+56)) -eq 0x014AF000
  $hooks=@()
  if($known){foreach($spec in $meta.hooks){
-  $at=$base+(ParseProxyHex $spec.patch_rva);$b=ReadProxyBytes $at 5;$target=if($b[0] -eq 0xE8){$at+5+[BitConverter]::ToInt32($b,1)}else{[long]0}
+  $at=$base+(ParseProxyHex $spec.patch_rva);$b=ReadProxyBytes $at 5;$expectedOpcode=if($spec.kind -eq 'particle_entry'){0xE9}else{0xE8};$target=if($b[0] -eq $expectedOpcode){$at+5+[BitConverter]::ToInt32($b,1)}else{[long]0}
   $owned=$false
   if($target -gt 0x10000 -and $target -ne ($base+(ParseProxyHex $spec.target_rva))){
    try{$t=ReadProxyBytes $target 14;$owned=$t[0] -eq 0xFF -and $t[1] -eq 0x25 -and [BitConverter]::ToUInt32($t,2) -eq 0 -and [BitConverter]::ToInt64($t,6) -eq ($dllBase+(ParseProxyHex $spec.wrapper_rva))}catch{}
   }
   $window=ReadProxyBytes ($base+(ParseProxyHex $spec.match_rva)) $spec.original_window.Length;$context=$true
   for($j=0;$j -lt $window.Length;$j++){if($j -ge $spec.patch_offset -and $j -lt ($spec.patch_offset+5)){continue};if($window[$j] -ne $spec.original_window[$j]){$context=$false}}
-  $hooks+=[ordered]@{Name=$spec.name;OwnedByProxy=$owned;NativeOriginalTarget=($target -eq ($base+(ParseProxyHex $spec.target_rva)));SurroundingContextMatches=$context;Target=('0x{0:X}'-f $target)}
+  $hooks+=[ordered]@{Name=$spec.name;OwnedByProxy=$owned;NativeOriginalTarget=$(if($spec.kind -eq 'particle_entry'){([BitConverter]::ToString($b)) -eq ([BitConverter]::ToString([byte[]]$spec.original_window[0..4]))}else{$target -eq ($base+(ParseProxyHex $spec.target_rva))});SurroundingContextMatches=$context;Target=('0x{0:X}'-f $target)}
  }}
- [ordered]@{CapturedUtc=(Get-Date).ToUniversalTime().ToString('o');Pid=$game.Id;ProxyPath=$expected;ProxyBase=('0x{0:X}'-f $dllBase);ConfigAddress=('0x{0:X}'-f $cfgAddress);Prepared=($prepared -ne 0);Active=[int]$cfg[0];CacheCapacity=[BitConverter]::ToUInt32($cfg,96);Epoch=[BitConverter]::ToUInt32($cfg,100);KnownGameLayout=$known;Categories=$categories;Hooks=$hooks} | ConvertTo-Json -Depth 8
+ $currentPreset=if($meta.symbols.g_currentPreset){ReadProxyUInt32 ($dllBase+(ParseProxyHex $meta.symbols.g_currentPreset.rva))}else{$null}
+ [ordered]@{Preset=$currentPreset;ProtectGameplay=[int]$cfg[$meta.protect_gameplay_offset];CapturedUtc=(Get-Date).ToUniversalTime().ToString('o');Pid=$game.Id;ProxyPath=$expected;ProxyBase=('0x{0:X}'-f $dllBase);ConfigAddress=('0x{0:X}'-f $cfgAddress);Prepared=($prepared -ne 0);Active=[int]$cfg[0];CacheCapacity=[BitConverter]::ToUInt32($cfg,96);Epoch=[BitConverter]::ToUInt32($cfg,100);KnownGameLayout=$known;Categories=$categories;Hooks=$hooks} | ConvertTo-Json -Depth 8
 }finally{[void][SsoProxyStateRead]::CloseHandle($handle)}

@@ -11,15 +11,18 @@ typedef struct {
     SIZE_T length,offset;
     DWORD targetRva;
     void *wrapper;
+    BOOL entry;
 } HookSpec;
 #include "hook_specs.inc"
 void *g_originals[HOOK_COUNT];
-const char *g_categoryNames[11]={"other player horses","other player characters","other player pets",
+void *g_particleChildren;
+const char *g_categoryNames[14]={"other player horses","other player characters","other player pets",
     "NPC pets / ambient animals (name based)","NPC actors / unclassified NPC models","NPC horses (name based)",
-    "standalone riderless horses","sale / display horses","coins / collectible visuals","quest ? / ! markers","NPC floating text / speech bubbles"};
+    "standalone riderless horses","sale / display horses","coins / collectible visuals","quest ? / ! markers","NPC floating text / speech bubbles",
+    "allowlisted ambient particles","ALL particle visuals (broad)","detail grass"};
 typedef struct {
     BYTE *window,*call,*thunk;
-    BYTE original[64],patched[64];
+    BYTE original[256],patched[256];
     SIZE_T length,offset;
 } Hook;
 static Hook g_hooks[HOOK_COUNT];
@@ -30,7 +33,7 @@ static DWORD g_epoch;
 #ifdef SSO_PROXY_TESTING
 static LONG g_testFailAfterWrite=-1;
 #endif
-_Static_assert(sizeof(Config)==344,"Config layout drift");
+_Static_assert(sizeof(Config)==368,"Config layout drift");
 _Static_assert(offsetof(Config,hits)==256,"Counter layout drift");
 
 int ProxyHideActor(U64 actor) {
@@ -45,12 +48,24 @@ int ProxyHideFlag(U32 index) {
     __try {return SSO5_flag(index);}
     __except(EXCEPTION_EXECUTE_HANDLER){InterlockedIncrement(&g_faults);return 0;}
 }
+int ProxyHideParticles(U64 actor) {
+    __try {return SSO5_particles(actor);}
+    __except(EXCEPTION_EXECUTE_HANDLER){InterlockedIncrement(&g_faults);return 0;}
+}
 LONG VisibilityFaultCount(void){return InterlockedCompareExchange(&g_faults,0,0);}
-void VisibilityInitialize(void){for(unsigned i=0;i<11;i++)g_config.hide[i]=1;}
+void VisibilityInitialize(void){for(unsigned i=0;i<CATEGORY_COUNT;i++)g_config.hide[i]=i<11?1:0;}
 void VisibilityToggleCategory(unsigned index){
-    if(index>=11)return;
+    if(index>=CATEGORY_COUNT)return;
     g_config.hide[index]=g_config.hide[index]==1?0:1;
     ProxyLog("category %u: %s; hide=%u%s",index+1,g_categoryNames[index],g_config.hide[index],g_config.active?" (active)":" (saved for F5)");
+}
+BOOL VisibilityApplyOptions(const BYTE flags[14],BOOL protectGameplay){
+    if(g_ready&&g_epoch>=65535){ProxyLog("Preset refused: cache epoch exhausted; restart game.");return FALSE;}
+    BYTE wasActive=g_config.active;g_config.active=0;
+    for(unsigned i=0;i<CATEGORY_COUNT;i++)g_config.hide[i]=flags[i]?1:0;
+    g_config.protectGameplay=protectGameplay?1:0;
+    if(g_ready)g_config.epoch=++g_epoch;
+    MemoryBarrier();g_config.active=wasActive;return TRUE;
 }
 static BOOL Equal(const BYTE *a,const BYTE *b,SIZE_T n){
     for(SIZE_T i=0;i<n;i++)if(((const volatile BYTE*)a)[i]!=b[i])return FALSE;return TRUE;
@@ -120,10 +135,15 @@ static BOOL Prepare(BYTE *base){
     Hook temporary[HOOK_COUNT];ZeroMemory(temporary,sizeof(temporary));
     for(unsigned i=0;i<HOOK_COUNT;i++){
         const HookSpec *spec=&g_specs[i];BYTE *window=FindUnique(base,nt,spec);
-        if(!window||spec->length>64){ProxyLog("F5 rejected: %s signature missing/ambiguous. Disable all CE visibility entries first.",spec->name);return FALSE;}
+        if(!window||spec->length>256){ProxyLog("F5 rejected: %s signature missing/ambiguous. Disable all CE visibility entries first.",spec->name);return FALSE;}
         BYTE *call=window+spec->offset;INT32 relative;
-        memcpy(&relative,call+1,4);BYTE *target=call+5+relative;
-        if(call[0]!=0xE8||target!=base+spec->targetRva||!Executable(nt,spec->targetRva,1)){
+        BYTE *target;
+        if(spec->entry){
+            static const BYTE stolen[5]={0x48,0x89,0x5C,0x24,0x08};
+            if(spec->length<10||!Equal(call,stolen,5)||window[spec->length-5]!=0xE9)return FALSE;
+            memcpy(&relative,window+spec->length-4,4);target=window+spec->length+relative;
+        }else{memcpy(&relative,call+1,4);target=call+5+relative;}
+        if((!spec->entry&&call[0]!=0xE8)||target!=base+spec->targetRva||!Executable(nt,spec->targetRva,1)){
             ProxyLog("F5 rejected: %s call target differs (possible active CE hook).",spec->name);return FALSE;
         }
         temporary[i].window=window;temporary[i].call=call;temporary[i].length=spec->length;temporary[i].offset=spec->offset;
@@ -141,17 +161,20 @@ static BOOL Prepare(BYTE *base){
         INT64 displacement=thunk-(temporary[i].call+5);
         if(displacement<INT32_MIN||displacement>INT32_MAX){VirtualFree(cache,0,MEM_RELEASE);VirtualFree(thunks,0,MEM_RELEASE);ProxyLog("F5 rejected: near CALL range validation failed.");return FALSE;}
         INT32 rel=(INT32)displacement;temporary[i].thunk=thunk;
-        temporary[i].patched[temporary[i].offset]=0xE8;memcpy(temporary[i].patched+temporary[i].offset+1,&rel,4);
+        temporary[i].patched[temporary[i].offset]=g_specs[i].entry?0xE9:0xE8;memcpy(temporary[i].patched+temporary[i].offset+1,&rel,4);
     }
     DWORD old;
     if(!VirtualProtect(thunks,65536,PAGE_EXECUTE_READ,&old)){VirtualFree(cache,0,MEM_RELEASE);VirtualFree(thunks,0,MEM_RELEASE);ProxyLog("F5 rejected: cannot protect prepared code block.");return FALSE;}
     FlushInstructionCache(GetCurrentProcess(),thunks,65536);
     memcpy(g_hooks,temporary,sizeof(g_hooks));g_image=base;g_thunks=thunks;
-    for(unsigned i=0;i<HOOK_COUNT;i++)g_originals[i]=base+g_specs[i].targetRva;
+    for(unsigned i=0;i<HOOK_COUNT;i++){
+        g_originals[i]=g_specs[i].entry?g_hooks[i].call+5:base+g_specs[i].targetRva;
+        if(g_specs[i].entry)g_particleChildren=base+g_specs[i].targetRva;
+    }
     g_config.base=(U64)base;g_config.registryAddress=(U64)base+0x1379EF0;g_config.localRefAddress=(U64)base+0x1302F28;
     g_config.cacheAddress=(U64)cache;g_config.capacity=capacity;
-    const DWORD vtables[]={0xEE4520,0xEE5FE8,0xEE6830,0xEE6BA8,0xFE4770,0xFD10F8,0xF10600,0xF4A868,0xF23958,0xF37BB8,0xF3E8D0,0xF26E20};
-    U64 *dest=&g_config.mesh;for(unsigned i=0;i<12;i++)dest[i]=(U64)base+vtables[i];
+    const DWORD vtables[]={0xEE4520,0xEE5FE8,0xEE6830,0xEE6BA8,0xFE4770,0xFD10F8,0xF10600,0xF4A868,0xF23958,0xF37BB8,0xF3E8D0,0xF26E20,0xF252F8,0xEFDFA0,0xF42900};
+    U64 *dest=&g_config.mesh;for(unsigned i=0;i<15;i++)dest[i]=(U64)base+vtables[i];
     g_ready=TRUE;ProxyLog("prepared %u unique hooks; cache=%u records (%u MiB). No code sites changed yet.",HOOK_COUNT,capacity,(unsigned)(capacity*sizeof(Cache)/(1024*1024)));
     return TRUE;
 }

@@ -1,6 +1,14 @@
 # Project notes
 
-This is the standalone Windows x64 CMake source for the OpenGL visibility proxy. Start with README.md and docs/ARCHITECTURE.md. The historical reverse-engineering handoffs are retained in docs/; old workspace paths and DLL addresses there are not current build metadata.
+This linked repository is now the maintained checkout, despite the historical1.1.0 folder name. Start new sessions with docs/SESSION_HANDOFF.md and docs/REQUEST_HISTORY.md. Keep all new builds/packages under ignored out/. The old workspace sso-visibility-proxy tree is a snapshot, not the authoritative future editing location.
+
+GitHub Actions is disabled at the user's explicit request. Preserve .github/workflows/windows.yml.disabled; do not re-enable it without a new user instruction. Local builds/tests remain available. research/legacy-ce is archival and must not become a runtime dependency.
+
+docs/IMPLEMENTATION_STATUS.md is the final request-by-request source/delivery audit. Keep it current when changing category scope, presets, adapters or update compatibility. It distinguishes implemented features from live validation and from unsupported arbitrary future layouts/loaders.
+
+This is the standalone Windows x64 CMake source for SSO Visibility 1.2.0: OpenGL proxy, ReShade addon, InitializeASI and explicit DLL adapters share one core. Start with README.md, docs/ARCHITECTURE.md, docs/LOADER_ADAPTERS.md and docs/JOURNAL.md. The historical reverse-engineering handoffs are retained in docs/; old workspace paths and DLL addresses there are not current build metadata.
+
+Current user defaults: preset8 selects only remote riders, horses and pets, with master off until F5 or preset selection. Preset0 is immutable all14 supported filters; 0–4 aggressive, 5–9 guarded, preset9 riders/horses only. Preserve these defaults and F5/F6/F7 semantics. New particle entry must retain child dispatch and replay the exact stolen instruction on native passthrough. Config is368 bytes,14 categories,21 ordered hooks; old metadata is incompatible.
 
 Build with build.cmd, or use the VS 2026/2022 presets. Native tests run in helper processes and must keep their assertions enabled in Release. The shipping DLL must not define SSO_PROXY_TESTING. Preserve own-actor checks, pass-through error behavior, exact restoration and the ordered wrapper/AOB contract.
 

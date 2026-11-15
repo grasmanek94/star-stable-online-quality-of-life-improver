@@ -49,14 +49,19 @@ for base in [preferred,0x500000000]:
       for original in [0,1]:
        for hide in [0,1]:
         u,sp,expected=setup(base);target=GAME+int(d['target_rva'],16)
-        u.mem_write(base+symbols['g_originals']+8*i,struct.pack('<Q',target))
+        entry=d.get('kind')=='particle_entry'
+        continuation=GAME+int(d['patch_rva'],16)+5 if entry else target
+        u.mem_write(base+symbols['g_originals']+8*i,struct.pack('<Q',continuation))
+        u.mem_write(base+symbols['g_config'],b'\1')
+        u.mem_write(base+symbols['g_config']+27,bytes([1-original,original,1]))
+        if entry:u.mem_write(base+symbols['g_particleChildren'],struct.pack('<Q',target))
         thunk=THUNKS+i*16;u.mem_write(thunk,b'\xFF\x25\0\0\0\0'+struct.pack('<Q',base+symbols[f'HideHook_{i}'])+b'\x90\x90')
-        helpers={base+symbols[n]for n in ['ProxyHideActor','ProxyHideVisual','ProxyHideFlag']};seen=[]
+        helpers={base+symbols[n]for n in ['ProxyHideActor','ProxyHideVisual','ProxyHideFlag','ProxyHideParticles']};seen=[]
         def hook(uc,at,n,_):
             if at==STOP:uc.emu_stop();return
-            if at==target:
-                seen.append('original');rsp=uc.reg_read(UC_X86_REG_RSP);assert rsp%16==8
-                if name not in ['rider','horse','pet','skinGate','meshGate']:assert rsp==sp
+            if at==continuation or (entry and at==target):
+                seen.append('children'if entry and at==target else 'original');rsp=uc.reg_read(UC_X86_REG_RSP);assert rsp%16==8
+                if name not in ['rider','horse','pet','skinGate','meshGate','particleLegacyGate']:assert rsp==sp
                 uc.reg_write(UC_X86_REG_RAX,MASK|original);ret(uc)
             elif at in helpers:
                 seen.append('classifier');assert uc.reg_read(UC_X86_REG_RSP)%16==8
@@ -65,14 +70,17 @@ for base in [preferred,0x500000000]:
                 uc.reg_write(UC_X86_REG_RAX,hide);ret(uc)
         u.hook_add(UC_HOOK_CODE,hook);u.emu_start(thunk,STOP,count=2000)
         assert u.reg_read(UC_X86_REG_RIP)==STOP and u.reg_read(UC_X86_REG_RSP)==sp+8
-        assert bytes(u.mem_read(sp+8,192))==bytes(range(192)),(name,'stack args')
+        expected_stack=bytearray(range(192))
+        if entry and not hide:expected_stack[:8]=struct.pack('<Q',expected[UC_X86_REG_RBX])
+        assert bytes(u.mem_read(sp+8,192))==bytes(expected_stack),(name,'stack args')
         for r,value in expected.items():
             if r!=UC_X86_REG_RAX:assert u.reg_read(r)==value,(name,r)
         if name in ['rider','horse','pet']:assert u.reg_read(UC_X86_REG_RAX)==MASK|bool(original or hide)
-        elif name in ['skinGate','meshGate']:assert u.reg_read(UC_X86_REG_RAX)==MASK|bool(original and not hide)
+        elif name in ['skinGate','meshGate','particleLegacyGate']:assert u.reg_read(UC_X86_REG_RAX)==MASK|bool(original and not hide)
+        elif entry:assert seen==['classifier','children'if hide else 'original']
         else:assert ('original'in seen)==(not hide)
         wrapper_results.append({'layout':'preferred'if base==preferred else 'ASLR DLL beyond near-CALL range','hook':name,'original':original,'hide':hide,'status':'pass'})
-    for index in [0,184,367]:
+    for index in ([0,184,367]if 'g_glFunctions'in symbols else []):
       for lazy in [True,False]:
         u,sp,expected=setup(base);table=base+symbols['g_glFunctions'];real=GAME+0x1000;seen=[]
         if not lazy:u.mem_write(table+index*8,struct.pack('<Q',real))

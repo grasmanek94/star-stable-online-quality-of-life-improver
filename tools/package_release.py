@@ -1,0 +1,86 @@
+"""Collect matching CPack runtime/source archives into a local release bundle.
+
+Build all four Release adapters with -Package, then create the CPack source ZIP.
+Python is optional for this collector; normal build/install/CPack need no Python.
+"""
+from pathlib import Path, PurePosixPath
+import argparse
+import configparser
+import hashlib
+import json
+import shutil
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--configuration', choices=('Release','Debug','RelWithDebInfo'), default='Release')
+parser.add_argument('--source', type=Path, default=ROOT/'out/packages/source/SSO-Visibility-Proxy-1.2.0-source.zip')
+parser.add_argument('--output', type=Path, default=ROOT/'out/releases/1.2.0')
+args = parser.parse_args()
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+def check_ini(data):
+    ini = configparser.ConfigParser()
+    ini.optionxform = str
+    ini.read_string(data.decode('utf-8-sig'))
+    if ini['General'].getint('DefaultPreset') != 8:
+        raise RuntimeError('Unexpected default preset in package')
+
+source = args.source.read_bytes()
+with zipfile.ZipFile(args.source) as archive:
+    if archive.testzip():
+        raise RuntimeError('Source ZIP CRC failure')
+    names = archive.namelist()
+    if any('/out/' in n or '/.git/' in n or n.lower().endswith(('.exe','.dll','.pdb','.etl','.i64')) for n in names):
+        raise RuntimeError('Build, repository-private or binary artifact in source ZIP')
+    for required in ('CMakeLists.txt','config/SSOVisibility.ini','docs/IMPLEMENTATION_STATUS.md',
+                     'docs/REQUEST_HISTORY.md','docs/SESSION_HANDOFF.md','tools/package_release.py'):
+        if not any(n.endswith('/'+required) for n in names):
+            raise RuntimeError(f'Required source/handoff missing: {required}')
+args.output.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(args.source, args.output/args.source.name)
+manifest = dict(version='1.2.0', configuration=args.configuration, default_preset=8,
+    source_archive=dict(filename=args.source.name, sha256=sha(source)), adapters={}, live_1_2_verified=False)
+bundle = args.output/'SSO-Visibility-1.2.0-all-loaders.zip'
+with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as target:
+    target.writestr('README.md', '# SSO Visibility 1.2.0\n\nChoose ONE adapter folder. Read its README.md and LOADER_ADAPTERS.md.\n'
+        'Put SSOVisibility.ini beside the chosen module. Default8 hides remote riders/horses/pets.\n'
+        'F5 enables, F6 restores, F7 reloads INI; Ctrl+Numpad0 all filters,1–9 presets.\n'
+        'New1.2 live gameplay/loader/FPS validation remains pending. No third-party loader is bundled.\n'
+        'Builds, hashes and isolated checks: docs/BUILD_VALIDATION.md. Request/repair handoff: docs/SESSION_HANDOFF.md.\n')
+    for loader, filename in [('PROXY','opengl32.dll'),('RESHADE','SSOVisibility.addon64'),
+                              ('ASI','SSOVisibility.asi'),('PLUGIN','SSOVisibility.dll')]:
+        path = ROOT/'out/packages'/loader/args.configuration/f'SSO-Visibility-Proxy-1.2.0-{loader}-win64.zip'
+        with zipfile.ZipFile(path) as archive:
+            if archive.testzip():
+                raise RuntimeError(f'Runtime ZIP CRC failure: {loader}')
+            prefix = PurePosixPath(path.stem)
+            files = {PurePosixPath(n).relative_to(prefix).as_posix():n for n in archive.namelist() if not n.endswith('/')}
+            required = {filename,'SSOVisibility.ini','README.md','LOADER_ADAPTERS.md',
+                        'IMPLEMENTATION_STATUS.md','validation/proxy-symbols.json','read-proxy-state.ps1'}
+            if not required <= files.keys() or any(n.startswith('..') for n in files):
+                raise RuntimeError(f'Runtime package contents differ: {loader}')
+            meta = json.loads(archive.read(files['validation/proxy-symbols.json']).decode('utf-8-sig'))
+            binary = archive.read(files[filename])
+            if sha(binary) != meta['dll_sha256'] or meta['module_name'] != filename:
+                raise RuntimeError(f'Runtime module/metadata mismatch: {loader}')
+            if len(meta['hooks']) != 21 or len(meta['categories']) != 14 or meta['config_size'] != 368:
+                raise RuntimeError(f'Unexpected runtime layout: {loader}')
+            check_ini(archive.read(files['SSOVisibility.ini']))
+            for relative, member in files.items():
+                target.writestr(loader+'/'+relative, archive.read(member))
+        shutil.copyfile(path, args.output/path.name)
+        manifest['adapters'][loader] = dict(module=filename, module_sha256=sha(binary),
+            archive=path.name, archive_sha256=sha(path.read_bytes()))
+    for name in ('JOURNAL.md','ARCHITECTURE.md','LOADER_ADAPTERS.md','IMPLEMENTATION_STATUS.md',
+                 'REQUEST_HISTORY.md','SESSION_HANDOFF.md','BUILD_VALIDATION.md','build-validation.json'):
+        target.write(ROOT/'docs'/name, 'docs/'+name)
+    target.writestr('manifest.json', json.dumps(manifest, indent=2)+'\n')
+manifest['bundle'] = dict(filename=bundle.name, sha256=sha(bundle.read_bytes()))
+(args.output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
+with zipfile.ZipFile(bundle) as archive:
+    if archive.testzip():
+        raise RuntimeError('Combined ZIP CRC failure')
+print(json.dumps({'directory':str(args.output), 'bundle':bundle.name, 'source':args.source.name, 'adapters':4}))
