@@ -13,6 +13,7 @@ function(sso_configure_target target)
     # Stable direct symbols are needed by the link-map diagnostic and ASM tests.
     target_link_options(${target} PRIVATE /DYNAMICBASE /NXCOMPAT /INCREMENTAL:NO
         "$<$<CONFIG:Release,RelWithDebInfo>:/OPT:REF;/OPT:ICF>")
+    sso_add_version_resource(${target})
 endfunction()
 
 function(sso_configure_test target)

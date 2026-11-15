@@ -5,6 +5,8 @@
 *.asm text eol=lf
 *.def text eol=lf
 *.cmake text eol=lf
+*.rc text eol=lf
+*.rc.in text eol=lf
 *.json text eol=lf
 *.py text eol=lf
 *.md text eol=lf

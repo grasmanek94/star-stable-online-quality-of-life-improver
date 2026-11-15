@@ -28,6 +28,8 @@ def check_ini(data):
     if ini['General'].getint('DefaultPreset') != 8:
         raise RuntimeError('Unexpected default preset in package')
 
+documentation = ('JOURNAL.md','ARCHITECTURE.md','LOADER_ADAPTERS.md','IMPLEMENTATION_STATUS.md',
+                 'REQUEST_HISTORY.md','SESSION_HANDOFF.md','PE_METADATA.md','BUILD_VALIDATION.md','build-validation.json')
 source = args.source.read_bytes()
 with zipfile.ZipFile(args.source) as archive:
     if archive.testzip():
@@ -36,9 +38,17 @@ with zipfile.ZipFile(args.source) as archive:
     if any('/out/' in n or '/.git/' in n or n.lower().endswith(('.exe','.dll','.pdb','.etl','.i64')) for n in names):
         raise RuntimeError('Build, repository-private or binary artifact in source ZIP')
     for required in ('CMakeLists.txt','config/SSOVisibility.ini','docs/IMPLEMENTATION_STATUS.md',
-                     'docs/REQUEST_HISTORY.md','docs/SESSION_HANDOFF.md','tools/package_release.py'):
+                     'docs/REQUEST_HISTORY.md','docs/SESSION_HANDOFF.md','tools/package_release.py',
+                     'cmake/VersionResources.cmake','cmake/GenerateVersionResource.cmake',
+                     'cmake/version.rc.in','tools/verify_pe_metadata.ps1','docs/PE_METADATA.md'):
         if not any(n.endswith('/'+required) for n in names):
             raise RuntimeError(f'Required source/handoff missing: {required}')
+    source_documentation = {}
+    for name in documentation:
+        matches = [n for n in names if n.endswith('/docs/'+name)]
+        if len(matches) != 1:
+            raise RuntimeError(f'Missing/ambiguous source documentation: {name}')
+        source_documentation[name] = archive.read(matches[0])
 args.output.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(args.source, args.output/args.source.name)
 manifest = dict(version='1.2.0', configuration=args.configuration, default_preset=8,
@@ -74,9 +84,9 @@ with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED, compressleve
         shutil.copyfile(path, args.output/path.name)
         manifest['adapters'][loader] = dict(module=filename, module_sha256=sha(binary),
             archive=path.name, archive_sha256=sha(path.read_bytes()))
-    for name in ('JOURNAL.md','ARCHITECTURE.md','LOADER_ADAPTERS.md','IMPLEMENTATION_STATUS.md',
-                 'REQUEST_HISTORY.md','SESSION_HANDOFF.md','BUILD_VALIDATION.md','build-validation.json'):
-        target.write(ROOT/'docs'/name, 'docs/'+name)
+    # Use the source snapshot, preserving unrelated uncommitted working-tree notes.
+    for name, contents in source_documentation.items():
+        target.writestr('docs/'+name, contents)
     target.writestr('manifest.json', json.dumps(manifest, indent=2)+'\n')
 manifest['bundle'] = dict(filename=bundle.name, sha256=sha(bundle.read_bytes()))
 (args.output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')

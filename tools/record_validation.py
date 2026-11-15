@@ -74,12 +74,20 @@ for loader, preset, configuration in matrix:
     assembly = json.loads((validation/'compiled-assembly.json').read_text())
     if classifier['status'] != 'pass' or assembly['status'] != 'pass' or assembly['dll_sha256'] != digest:
         raise RuntimeError(f'Classifier/assembly result mismatch: {validation}')
+    pe_metadata = json.loads((validation/'pe-metadata.json').read_text())
+    images = {path.name for path in folder.iterdir() if path.suffix.lower() in {'.exe','.dll','.asi','.addon64'}}
+    if {image['File'] for image in pe_metadata['Files']} != images:
+        raise RuntimeError(f'PE metadata report does not cover all outputs: {validation}')
+    for image in pe_metadata['Files']:
+        if sha(folder/image['File']) != image['Sha256']:
+            raise RuntimeError(f'Stale PE metadata report: {validation}')
     builds.append(dict(loader=loader, preset=preset, configuration=configuration,
         module=module.name, dll_sha256=digest, imports=dependencies, config_rva=meta['symbols']['g_config']['rva'],
         config_size=meta['config_size'], hooks=len(meta['hooks']), categories=len(meta['categories']),
         ctest_suites=len(cases), suite_names=sorted(expected), runtime_scenarios=int(runtime[1]),
         classifier_cases=classifier['case_count'], compiled_wrapper_cases=assembly['wrapper_execution_cases'],
         compiled_forwarder_cases=assembly['forwarder_execution_cases'],
+        pe_metadata_images=pe_metadata['CheckedImages'], pe_metadata_sha256=sha(validation/'pe-metadata.json'),
         junit_sha256=sha(validation/'ctest.xml'), log_sha256=sha(validation/'ctest.log')))
 
 inputs = {}

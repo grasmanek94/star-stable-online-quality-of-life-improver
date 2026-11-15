@@ -1,0 +1,36 @@
+#pragma code_page(65001)
+#include <winver.h>
+
+LANGUAGE 0x09, 0x01
+1 VERSIONINFO
+ FILEVERSION @SSO_RESOURCE_VERSION_TUPLE@
+ PRODUCTVERSION @SSO_RESOURCE_VERSION_TUPLE@
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEFLAGS @SSO_RESOURCE_FLAGS@
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE @SSO_RESOURCE_FILETYPE@
+ FILESUBTYPE 0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "@SSO_RESOURCE_AUTHOR@\0"
+            VALUE "Author", "@SSO_RESOURCE_AUTHOR@\0"
+            VALUE "Authors", "@SSO_RESOURCE_AUTHOR@\0"
+            VALUE "FileDescription", "@SSO_RESOURCE_PRODUCT@ - @SSO_RESOURCE_REPOSITORY@\0"
+            VALUE "ProductName", "@SSO_RESOURCE_PRODUCT@\0"
+            VALUE "FileVersion", "@SSO_RESOURCE_VERSION@\0"
+            VALUE "ProductVersion", "@SSO_RESOURCE_VERSION@\0"
+            VALUE "InternalName", "@SSO_RESOURCE_INTERNAL_NAME@\0"
+            VALUE "OriginalFilename", "@SSO_RESOURCE_FILENAME@\0"
+            VALUE "LegalCopyright", "Copyright (c) 2026-@SSO_RESOURCE_YEAR@ @SSO_RESOURCE_AUTHOR@\0"
+            VALUE "Comments", "Repository: @SSO_RESOURCE_REPOSITORY@\0"
+            VALUE "RepositoryURL", "@SSO_RESOURCE_REPOSITORY@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END

@@ -1,5 +1,7 @@
 # Project notes
 
+All PE targets get build-time VERSIONINFO via cmake/VersionResources.cmake and cmake/GenerateVersionResource.cmake. Preserve the product/author/repository identity and automatic2026-to-current-UTC-year range. tools/build.ps1 verifies every PE output with tools/verify_pe_metadata.ps1; see docs/PE_METADATA.md. Resource changes relink modules and require fresh matching symbol/test metadata.
+
 This linked repository is now the maintained checkout, despite the historical1.1.0 folder name. Start new sessions with docs/SESSION_HANDOFF.md and docs/REQUEST_HISTORY.md. Keep all new builds/packages under ignored out/. The old workspace sso-visibility-proxy tree is a snapshot, not the authoritative future editing location.
 
 GitHub Actions is disabled at the user's explicit request. Preserve .github/workflows/windows.yml.disabled; do not re-enable it without a new user instruction. Local builds/tests remain available. research/legacy-ce is archival and must not become a runtime dependency.

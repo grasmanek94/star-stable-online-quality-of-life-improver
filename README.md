@@ -24,6 +24,8 @@ Install Visual Studio 2022 or 2026 / Build Tools with **Desktop development with
 
 The CMake cache option is `SSO_HOST=PROXY|RESHADE|ASI|PLUGIN`. The proxy is C17/MASM; plugin adapters add a small C++17 ABI shim. All use the same classifier, hooks, INI and controls. They link the CRT statically.
 
+All PE outputs, including helper EXE/DLLs, embed the product name **Star Stable Online Frame Rate / Performance Fixer**, repository URL in FileDescription, author **grasmanek94**, project version and **2026–current UTC build year** copyright. CMake generates the RC at build time, and the wrapper verifies the linked properties. See [PE metadata and generation](docs/PE_METADATA.md).
+
 For VS 2026, outputs are under `out/build/vs2026-x64/bin/<configuration>/`; other adapters use `vs2026-x64-reshade`, `-asi` or `-plugin`. VS 2022 uses corresponding `vs2022` names. Runtime ZIPs are under `out/packages/<LOADER>/<configuration>/`. The wrapper never installs into or launches a game.
 
 Direct CMake is also supported:

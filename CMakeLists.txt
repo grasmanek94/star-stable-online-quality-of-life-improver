@@ -9,7 +9,7 @@ endif()
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR NOT CMAKE_C_COMPILER_ARCHITECTURE_ID STREQUAL "x64")
     message(FATAL_ERROR "This proxy supports Windows x64 only. Select -A x64 or an x64 Developer Command Prompt.")
 endif()
-enable_language(ASM_MASM)
+enable_language(ASM_MASM RC)
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build configuration" FORCE)
@@ -21,6 +21,7 @@ set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/symbols/$<CONFIG>")
 set(CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/symbols/$<CONFIG>")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+include(cmake/VersionResources.cmake)
 include(cmake/CompilerOptions.cmake)
 find_program(SSO_POWERSHELL NAMES powershell.exe REQUIRED)
 

@@ -1,0 +1,25 @@
+# Run at build time, including incremental builds over a calendar-year change.
+# configure_file only updates the output timestamp when its content changes.
+foreach(required IN ITEMS OUTPUT TEMPLATE FILENAME INTERNAL_NAME FILETYPE DEBUG VERSION VERSION_TUPLE)
+    if(NOT DEFINED SSO_RESOURCE_${required} OR "${SSO_RESOURCE_${required}}" STREQUAL "")
+        message(FATAL_ERROR "Missing SSO_RESOURCE_${required}")
+    endif()
+endforeach()
+
+# Copyright follows the actual UTC build year, independently of source timestamps.
+unset(ENV{SOURCE_DATE_EPOCH})
+string(TIMESTAMP SSO_RESOURCE_YEAR "%Y" UTC)
+if(SSO_RESOURCE_YEAR LESS 2026)
+    set(SSO_RESOURCE_YEAR 2026)
+endif()
+set(SSO_RESOURCE_PRODUCT "Star Stable Online Frame Rate / Performance Fixer")
+set(SSO_RESOURCE_REPOSITORY "https://github.com/grasmanek94/star-stable-online-quality-of-life-improver")
+set(SSO_RESOURCE_AUTHOR "grasmanek94")
+if(SSO_RESOURCE_DEBUG)
+    set(SSO_RESOURCE_FLAGS VS_FF_DEBUG)
+else()
+    set(SSO_RESOURCE_FLAGS 0L)
+endif()
+get_filename_component(resource_directory "${SSO_RESOURCE_OUTPUT}" DIRECTORY)
+file(MAKE_DIRECTORY "${resource_directory}")
+configure_file("${SSO_RESOURCE_TEMPLATE}" "${SSO_RESOURCE_OUTPUT}" @ONLY NEWLINE_STYLE LF)

@@ -54,6 +54,7 @@ try {
     Invoke-BuildTool $cmakePath @('--preset', $configurePreset, "-DCMAKE_GENERATOR_INSTANCE=$($chosen.installationPath)", '-DBUILD_TESTING=ON', "-DSSO_PROXY_ENABLE_ASM_TESTS=$asmChoice")
     $buildPath = Join-Path $projectRoot "out/build/$configurePreset"
     Invoke-BuildTool $cmakePath @('--build', $buildPath, '--config', $Configuration, '--parallel')
+    & (Join-Path $PSScriptRoot 'verify_pe_metadata.ps1') -BuildDirectory (Join-Path $buildPath "bin/$Configuration") -OutputPath (Join-Path $buildPath "bin/$Configuration/validation/pe-metadata.json")
     if (-not $SkipTests) {
         $validationPath = Join-Path $buildPath "bin/$Configuration/validation"
         [IO.Directory]::CreateDirectory($validationPath) | Out-Null
