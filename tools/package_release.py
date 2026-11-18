@@ -27,7 +27,7 @@ parser.add_argument('--output', type=Path, default=ROOT/'out/releases'/VERSION)
 args = parser.parse_args()
 
 SOURCE_DIRS = {'cmake','config','data','generated','include','src','tests','tools'}
-SOURCE_FILES = {'CMakeLists.txt','CMakePresets.json','build.cmd','README.md','README-DEVELOPERS.md',
+SOURCE_FILES = {'CMakeLists.txt','CMakePresets.json','build.cmd','README.md','README.pl.md','README.nl.md','README-DEVELOPERS.md',
                 '.editorconfig','.gitattributes','.gitignore'}
 ADAPTERS = [('PROXY','opengl32.dll',''),('RESHADE','SSOVisibility.addon64','-reshade'),
             ('ASI','SSOVisibility.asi','-asi'),('PLUGIN','SSOVisibility.dll','-plugin')]
@@ -67,7 +67,7 @@ with zipfile.ZipFile(args.source) as archive:
     files = {n.removeprefix(prefix):n for n in names}
     if any(not n.startswith(prefix) for n in names) or not all(source_member(n) for n in files):
         raise RuntimeError('Source ZIP contains unrelated docs, research, AI notes or binary/build files')
-    required = {'CMakeLists.txt','CMakePresets.json','build.cmd','README.md','README-DEVELOPERS.md',
+    required = {'CMakeLists.txt','CMakePresets.json','build.cmd','README.md','README.pl.md','README.nl.md','README-DEVELOPERS.md',
                 'config/SSOVisibility.ini','data/client-layout.json','generated/layout_specs.inc',
                 'cmake/VersionResources.cmake','cmake/GenerateVersionResource.cmake','cmake/version.rc.in',
                 'tools/write_metadata.ps1','tools/verify_pe_metadata.ps1','tools/package_release.py'}

@@ -1,4 +1,4 @@
-# Architecture and maintenance — 1.2.2
+# Architecture and maintenance — 1.3.0
 
 ## Source ownership
 

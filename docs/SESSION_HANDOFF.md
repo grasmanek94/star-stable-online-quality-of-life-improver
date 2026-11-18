@@ -2,7 +2,7 @@
 
 ## Current checkout
 
-The user's maintained checkout is `C:\Users\Rafal\Documents\Codex\2026-11-15\tr\outputs\Star-Stable-OpenGL-proxy-CMake\SSO-Visibility-Proxy-1.1.0-source`, remote `https://github.com/grasmanek94/star-stable-online-quality-of-life-improver.git`, branch master. The old directory name is retained; code version is **1.2.2**. Older workspace tree `sso-visibility-proxy` and original work/proxy scripts are historical snapshots. Make future changes here and build here.
+The user's maintained checkout is `C:\Users\Rafal\Documents\Codex\2026-11-15\tr\outputs\Star-Stable-OpenGL-proxy-CMake\SSO-Visibility-Proxy-1.1.0-source`, remote `https://github.com/grasmanek94/star-stable-online-quality-of-life-improver.git`, branch master. The old directory name is retained; code version is **1.3.0**. Older workspace tree `sso-visibility-proxy` and original work/proxy scripts are historical snapshots. Make future changes here and build here.
 
 Read README-DEVELOPERS.md, AGENTS.md, IMPLEMENTATION_STATUS.md, REQUEST_HISTORY.md, JOURNAL.md, ARCHITECTURE.md and LOADER_ADAPTERS.md. Earlier discovery and failures are in REVERSE_ENGINEERING.md and SSO-Visibility-Engineering-Handoff.md. The runtime's data/ files and MASM wrapper order are canonical; historical static addresses elsewhere are not instructions to patch a newly updated client blindly.
 
@@ -31,7 +31,7 @@ After the four minimal CPack runtime packages exist, commit the intended changes
 python tools/package_release.py --create-source
 ```
 
-The optional standard-library collector writes `out/releases/1.2.2/`, containing all four runtime ZIPs, combined loader ZIP, build-only source ZIP and separate manifest. It checks exact2-file runtime/8-file combined contents, archive CRCs, module hashes against private local metadata, tested source inputs, config dimensions and default8. AI instructions, research/journal/handoff files and symbols are excluded from player/source downloads but retained in Git. README.md is now the simple public guide; README-DEVELOPERS.md retains technical build instructions. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
+The optional standard-library collector writes `out/releases/1.3.0/`, containing all four runtime ZIPs, combined loader ZIP, build-only source ZIP and separate manifest. It checks exact2-file runtime/8-file combined contents, archive CRCs, module hashes against private local metadata, tested source inputs, config dimensions and default8. AI instructions, research/journal/handoff files and symbols are excluded from player/source downloads but retained in Git. README.md is now the simple public guide; README-DEVELOPERS.md retains technical build instructions. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
 
 ## Evidence map and boundaries
 
@@ -45,6 +45,12 @@ No build task should restart/play the game or replace its loaded module. The use
 
 ## Client647 repair, 2026-11-18
 
-Read [the repair journal](updates/2026-11-18-client-647.md) first for update failures. Current reference647.349716 SHA25662387b246a92a4874d20329caa6eaf06c7a29830263e94982a8bdad6b6110fe1; PE6AF719CF, image014C1000 are evidence only. All21 updated AOBs resolve uniquely in a native production-discovery file audit, with2 globals and15 RTTI vtables; read-only live checks confirmed the local player/horse structure. The game was not restarted, played or hotpatched, and no live hiding/FPS success is claimed. New code is version1.2.2; older installed modules must be replaced by the user with the game closed. Keep customized INI values.
+Read [the repair journal](updates/2026-11-18-client-647.md) first for update failures. Current reference647.349716 SHA25662387b246a92a4874d20329caa6eaf06c7a29830263e94982a8bdad6b6110fe1; PE6AF719CF, image014C1000 are evidence only. All21 updated AOBs resolve uniquely in a native production-discovery file audit, with2 globals and15 RTTI vtables; read-only live checks confirmed the local player/horse structure. The game was not restarted, played or hotpatched, and no live hiding/FPS success is claimed. Current package version is1.3.0; older installed modules must be replaced by the user with the game closed. Keep customized INI values.
 
 The optional helper mode is `out/build/vs2026-x64/bin/Release/sso_runtime_tests.exe --inspect-client <SSOClient.exe>`. It maps only file data, applies relocations in its own allocation, calls production discovery and prints JSON. It does not execute game code or require a running game. The standard native suite includes relocated bindings/vtables/helper destinations and missing, ambiguous, malformed-semantic and recovery checks. Generated layout_specs.inc is committed; no game file is needed for ordinary builds. Use matching g_patchSites/g_originals metadata for diagnostics; static game RVAs are reference values. KnownGameLayout in the diagnostic now means this runtime completed its validation, rather than a PE-header allowlist.
+
+## 1.3.0 player delivery and live confirmation
+
+On2026-11-18 the user reported that the client647 repair works. This supersedes the earlier pending-live status for core hiding; no exact loader, preset census, race coverage or new FPS measurements were provided. Version1.3.0 retains that hiding logic and updates PE/project version, simple player documentation, Polish/Dutch translations and minimal packaging. README.md, README.pl.md and README.nl.md share a top language bar, identical keys/presets and the account-ban warning. README-DEVELOPERS.md preserves the technical guide.
+
+After successful release publication, archive the current client with tools/cache_client.ps1 outside Git/build output. Default cache: Documents/Codex/cache/SSO-FPS/clients/<version>/<sha256>/SSOClient.exe plus local manifest. Verify source/copy hashes, preserve previous versions and use them for offline IDA differences on later updates. Never put cached executables in Git or release ZIPs. Historical binaries might remain in workspace snapshots; verify identities before adding them.

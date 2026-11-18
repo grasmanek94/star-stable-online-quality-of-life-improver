@@ -107,9 +107,9 @@ for name in ('CMakeLists.txt', 'CMakePresets.json'):
 report = dict(version=VERSION, recorded_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     location='linked repository working tree', builds=builds, native_input_hashes=inputs,
     native_input_hash_format='SHA256 after CRLF-to-LF normalization; PE/report hashes use raw bytes',
-    scope='Fresh local helper-process CTest and linked assembly results; no live 1.2 game/loader/FPS validation.',
+    scope='Fresh local helper-process CTest and linked assembly results; user-reported live confirmation is documented separately.',
     not_run=['separate VS2022 installation', 'remote GitHub Actions (disabled by request)',
-             'live 1.2 gameplay, GPU lifetime, ReShade/ASI and FPS checks'])
+             'full live preset/race matrix, GPU lifetime, all ReShade/ASI loaders and measured FPS checks'])
 args.output.parent.mkdir(parents=True, exist_ok=True)
 args.output.write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
 print(json.dumps({'report':str(args.output), 'builds':len(builds), 'suites_passed':sum(b['ctest_suites'] for b in builds)}))

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 # CMP0091 selects the CRT through a target property, rather than editing flags.
-project(SSOVisibility VERSION 1.2.2 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
+project(SSOVisibility VERSION 1.3.0 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     message(FATAL_ERROR "Use Windows with the Microsoft C compiler and x64 MASM (Visual Studio Desktop development with C++).")

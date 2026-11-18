@@ -1,4 +1,4 @@
-# SSO Visibility 1.2.2 — Windows x64
+# SSO Visibility 1.3.0 — Windows x64
 
 **Default preset 8 hides other players' riders, horses and pets. Your own remain visible.** Hiding starts off. Press F5 to enable the selected preset. The current analyzed reference is SSOClient **647.349716**. Activation discovers addresses and validates code, registry layout and local ownership; it does not require a matching version string, PE timestamp or exact image size. Future compiler/layout changes may still require an update.
 

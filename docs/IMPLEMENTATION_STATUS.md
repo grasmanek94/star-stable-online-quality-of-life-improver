@@ -1,5 +1,7 @@
 # Requested feature audit — 2026-11-15
 
+Current1.3.0 delivery adds a simple player README, Polish/Dutch translations with language navigation, and the explicit account-ban warning. Runtime ZIPs contain only module/INI pairs; source ZIPs include build files and multilingual/developer READMEs. The user confirmed the client647 repair works on2026-11-18. tools/cache_client.ps1 supports local version/hash archives for future offline update comparisons. These later decisions supersede older packaging/live-status statements below; native visibility policy is unchanged.
+
 Repository delivery now also preserves REQUEST_HISTORY.md, SESSION_HANDOFF.md, additional actor/cosmetic/performance evidence and historical CE work. Fresh builds/packages are generated in this linked checkout under out/. GitHub Actions is disabled by the user's later instruction; its archived .yml.disabled file must stay inactive until requested otherwise. The feature audit below remains the same; current build identities are in build-validation.json.
 
 This is a source and delivery audit of the final requested feature set, after the user asked whether everything was implemented and documented. The implementation is present in version 1.2.0. No unfinished feature stub was found. This audit does not claim new live testing or a measured saving. Current binaries are unchanged; this update adds a traceable requirements checklist to the documentation and packages.

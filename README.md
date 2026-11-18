@@ -1,3 +1,5 @@
+[English](README.md) | [Polski](README.pl.md) | [Nederlands](README.nl.md)
+
 # Star Stable Online FPS Fixer
 
 This unofficial Windows plugin can improve FPS in Star Stable Online by hiding things the game spends time drawing and animating. The improvement depends on your computer and the area you are in.
