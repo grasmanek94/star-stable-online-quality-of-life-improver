@@ -1,100 +1,69 @@
-# SSO Visibility 1.2.2
+# Star Stable Online FPS Fixer
 
-This linked repository is the maintained checkout. The local directory may still be named `SSO-Visibility-Proxy-1.1.0-source`; the project/build version is1.2.2. [Session handoff](docs/SESSION_HANDOFF.md) and [request history](docs/REQUEST_HISTORY.md) preserve the final decisions and research context. GitHub Actions is currently disabled by request; its configuration is retained as `.github/workflows/windows.yml.disabled`.
+This unofficial Windows plugin can improve FPS in Star Stable Online by hiding things the game spends time drawing and animating. The improvement depends on your computer and the area you are in.
 
-[Update1.2.2](docs/releases/1.2.2.md) repairs client647 compatibility, removes the PE version gate and discovers moved helpers, globals and vtables. The [repair journal](docs/updates/2026-11-18-client-647.md) records the evidence and future repair procedure.
+> **Account ban risk:** Installing and using this plugin likely violates [Star Stable's Terms of Service](https://help.starstable.com/hc/en-us/articles/4404692524946-Your-License-to-use-the-game-service) and **could get your account banned**. Star Stable says it [takes action against accounts using unauthorized modifications](https://www.starstable.com/en/article/player-safety). This project does not claim approval from Star Stable; using the ReShade version carries the same risk.
 
-A Windows x64 visibility controller for analyzed Star Stable client **647.349716**, with a shared native C17/MASM core and four loader adapters. No Cheat Engine, Lua, game files, IDA database, downloaded SDK or Python package is required to build or run it.
+By default, it hides **other players' characters, horses and pets**. Your own character, horse and pets stay visible.
 
-**Default preset 8 hides other players' riders, horses and pets only.** Hiding starts off; F5 enables the selected preset, F6 restores native code. Ctrl+Numpad0 applies all supported filters; Ctrl+Numpad1–9 applies editable presets. Defaults 0–4 are aggressive and 5–9 use gameplay guards. F7 reloads `SSOVisibility.ini`. Keep NumLock on.
+You can also choose presets that hide:
 
-The new optional filters cover allowlisted ambient particles, broad particle suppression and detail grass. They preserve native child traversal. The broad option can hide quest/race effects and fog; preset 8 leaves these filters off. Read [the user guide](docs/USER_GUIDE.md) for the preset ladder and its limits.
+- NPC characters, horses and animals.
+- Riderless horses and horses displayed for sale.
+- Coins and collectible visuals, quest question/exclamation marks, and NPC floating text or speech bubbles.
+- Decorative particles such as smoke, dust, glows and leaves, plus detail grass.
 
-## Build on Windows
+## Download and install
 
-Install Visual Studio 2022 or 2026 / Build Tools with **Desktop development with C++**, MSVC x64 tools, MASM and a Windows 10/11 SDK. Use CMake 3.25+ for VS 2022, or 4.2+ for VS 2026. The wrapper discovers the installed tools using `vswhere`.
+1. **Close Star Stable.**
+2. Open the **[Releases page](https://github.com/grasmanek94/star-stable-online-quality-of-life-improver/releases)** and choose the version you want. For the simplest setup, download the ZIP whose name ends with **`-PROXY-win64.zip`**.
+3. Right-click the ZIP and choose **Extract All**. It contains `opengl32.dll` and `SSOVisibility.ini`.
+4. Copy both files into the game's **`client` folder**, beside **`SSOClient.exe`**. You can search your computer for that file to find the right folder.
+5. Launch the game normally, enter the world and press **F5**.
 
-```powershell
-.\build.cmd                                      # OpenGL proxy, Release, tests
-.\build.cmd -Loader RESHADE -Package              # SSOVisibility.addon64
-.\build.cmd -Loader ASI -Package                  # SSOVisibility.asi
-.\build.cmd -Loader PLUGIN -Package               # SSOVisibility.dll
-.\build.cmd -Configuration Debug
-.\build.cmd -Configuration RelWithDebInfo
-.\build.cmd -Preset vs2022-x64 -Package
-```
+Install only one version of the plugin. When updating, close the game and replace the plugin file. Keep your existing `SSOVisibility.ini` if you have customized it.
 
-The CMake cache option is `SSO_HOST=PROXY|RESHADE|ASI|PLUGIN`. The proxy is C17/MASM; plugin adapters add a small C++17 ABI shim. All use the same classifier, hooks, INI and controls. They link the CRT statically.
+**Already using ReShade?** Keep its `opengl32.dll`. Download the `-RESHADE-win64.zip` instead and place `SSOVisibility.addon64` and the INI together in your ReShade addon folder. This requires 64-bit ReShade with full addon support. ASI and PLUGIN downloads need a compatible loader; see the [developer guide](README-DEVELOPERS.md#loader-choices).
 
-All PE outputs, including helper EXE/DLLs, embed the product name **Star Stable Online Frame Rate / Performance Fixer**, repository URL in FileDescription, author **grasmanek94**, project version and **2026–current UTC build year** copyright. CMake generates the RC at build time, and the wrapper verifies the linked properties. See [PE metadata and generation](docs/PE_METADATA.md).
+## Keys
 
-For VS 2026, outputs are under `out/build/vs2026-x64/bin/<configuration>/`; other adapters use `vs2026-x64-reshade`, `-asi` or `-plugin`. VS 2022 uses corresponding `vs2022` names. Runtime ZIPs are under `out/packages/<LOADER>/<configuration>/`. The wrapper never installs into or launches a game.
+Use these while the game window is active. **Turn NumLock on.** “Num” means the number pad on the right side of your keyboard.
 
-Direct CMake is also supported:
+| Key | What it does |
+|---|---|
+| **F5** | Turn hiding on using the selected preset. Starts with preset **8**. |
+| **F6** | Turn hiding off and show things again. Allow a few seconds for them to fade back in. |
+| **Ctrl + Num 0** | Hide as much as this plugin supports. |
+| **Ctrl + Num 1–9** | Choose that preset and turn hiding on. See below. |
+| **F7** | Reload your saved INI settings. |
 
-```powershell
-cmake --preset vs2026-x64-reshade
-cmake --build --preset vs2026-reshade-release
-ctest --preset vs2026-reshade-release
-```
+## Presets: how much gets hidden?
 
-Open Folder in Visual Studio and select a preset, or use the Ninja preset from an x64 MSVC Developer Command Prompt. Ninja's `SSO_HOST` can be overridden at configure time. MSVC x64 is required for SEH and MASM; MinGW, clang-cl, ARM64 and x86 are rejected.
+Start with **8**. Lower numbers hide more; higher numbers keep more visible.
 
-## Loader choices
+| Ctrl + Num | Default behavior |
+|---|---|
+| **0** | All supported filters, including coins, quest markers, NPC text and broad particle hiding. |
+| **1** | Same as 0, but keep quest markers. |
+| **2** | Same as 1, also keep NPC floating text and speech bubbles. |
+| **3** | Same as 2, also keep coins and collectibles. |
+| **4** | Same as 3, but hide only selected decorative particles instead of all particles. |
+| **5** | Same as 4, with extra protection for recognized race and quest visuals. |
+| **6** | Same as 5, also keep NPC people. |
+| **7** | Hide other players' characters, horses and pets, selected decorative particles and detail grass. |
+| **8 — default** | Hide only other players' characters, horses and pets. |
+| **9** | Hide only other players' characters and horses. Keep their pets. |
 
-| Build | Artifact | Initialization |
-|---|---|---|
-| PROXY | `opengl32.dll` | First forwarded OpenGL call; absolute System32 forwarding |
-| RESHADE | `SSOVisibility.addon64` | ReShade `AddonInit` / `AddonUninit` and registration ABI |
-| ASI | `SSOVisibility.asi` | An `InitializeASI`-capable loader, outside its loader lock |
-| PLUGIN | `SSOVisibility.dll` | Host calls `SSOVisibilityInitialize` / `SSOVisibilityShutdown` |
+**0–4 are aggressive.** They can hide useful race or quest effects, fog and your own cosmetic particles. **5–9 are intended for normal gameplay**, but no preset can recognize every important visual. Hiding something does not remove its collision: an invisible object can still block you. Press **F6** whenever you need everything visible again.
 
-Install **one adapter**. If ReShade already owns `opengl32.dll`, use the addon rather than replacing ReShade's DLL. Arbitrary shader plugins do not share a universal ABI: a loader must support one of the exported entry contracts. LoadLibrary-only ASI loaders require explicit initialization support. See [loader contracts and official references](docs/LOADER_ADAPTERS.md).
+## Change the settings
 
-## Structure
+Open `SSOVisibility.ini` in Notepad. Under `[Preset1]` through `[Preset9]`, set **`1` to hide** a category or **`0` to keep it visible**. Save, press **F7** in the game, then select the preset with **Ctrl + Num**. To choose a different starting preset, change the number in `DefaultPreset=8` under `[General]` and restart the game. Preset 0 always enables every filter and cannot be edited.
 
-```text
-src/host.c                    Common lifecycle, log and foreground hotkeys
-src/presets.c                 INI parsing and built-in presets
-src/proxy_main.c              System32 OpenGL forwarding adapter
-src/hosts/plugin_host.cpp     ReShade / ASI / explicit DLL ABI adapter
-src/visibility/               Patch lifecycle and shared classifier
-src/asm/visibility_hooks.asm  21 reviewed native wrappers
-config/SSOVisibility.ini       Editable default preset bank
-data/                         Canonical hook windows, layout, particle policy, exports
-generated/                    Committed build inputs; no generator needed to build
-tests/                        Native helper, classifier and linked assembly checks
-tools/                        Build, metadata and read-only diagnostic scripts
-docs/                         Guides, architecture, journal and repair evidence
-out/                          Builds and packages (excluded from source ZIP)
-```
+## If it does not work
 
-## Verification
+- Check that the plugin and INI are beside the correct game executable, then enter the world before pressing F5.
+- Check NumLock and use the number pad for presets.
+- A game update may need a newer plugin version. Check the [Releases page](https://github.com/grasmanek94/star-stable-online-quality-of-life-improver/releases). The plugin writes details to `SSO-visibility.log` beside its file.
 
-`BUILD_TESTING=ON` supplies three native suites: synthetic install/restore/recovery, preset configuration, and either OpenGL forwarding or plugin lifecycle. Optional Python 3.10+ adds classifier and generated-asset checks. Optional Unicorn executes the actual linked MASM code:
-
-```powershell
-python -m pip install -r tests/requirements.txt
-.\build.cmd -AsmTests -Package
-```
-
-Unicorn and Python are test tools only. Normal builds do not fetch dependencies. Generated files are committed. For intentional metadata changes, edit `data/` and run `python tools/generate_assets.py`, then `--check`. Wrappers are reviewed source, not generated.
-
-Builds emit a matching map and `validation/proxy-symbols.json` with the DLL hash and current private RVAs. The read-only diagnostic refuses a loaded module that does not match. Never reuse a previous build's config address. [BUILD_VALIDATION.md](docs/BUILD_VALIDATION.md) records the exact checked configurations and limits.
-
-The older 1.1 proxy was measured active in a live foreground capture. **The new 1.2 particle filters and loader adapters have isolated tests, but no live visual/FPS result yet.** The 0.4307 sampled ms/present particle cost motivates the experiment; it is not a promised saving. There is no timestamp/version/image-size allowlist. Relocation-masked AOBs, helper fingerprints, RIP-relative global discovery and exact class RTTI allow address changes while retaining ownership and registry checks. Compiler, control-flow and object-layout changes can still require repair; matching bytes do not prove live gameplay safety.
-
-## Packaging and maintenance
-
-```powershell
-cpack --config out/build/vs2026-x64/CPackConfig.cmake -C Release
-cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake
-```
-
-Runtime packages include the chosen adapter, default INI, guide, loader notes, read-only diagnostic and matching symbols. The source ZIP includes all committed build inputs and research notes, excluding `out/`, caches, the client, IDB and raw ETLs.
-
-After building all four Release adapters with `-Package`, create the source ZIP with `cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source`. Optional `python tools/package_release.py` collects verified runtime/source ZIPs and a combined bundle under `out/releases/1.2.2/`. Optional `python tools/record_validation.py` records matching per-configuration CTest evidence after the seven-build matrix. The native build and ordinary CPack packaging do not require these Python utilities.
-
-Start maintenance with [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [JOURNAL.md](docs/JOURNAL.md). Earlier actor/NPC analysis is retained in [REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md); its old DLL hashes and absolute paths are historical.
-
-The [request-by-request implementation audit](docs/IMPLEMENTATION_STATUS.md) maps the final feature requests to their code and documentation, including the precise update and loader compatibility boundaries.
+To uninstall, close the game and remove the plugin file you installed and its INI. Keep any files belonging to ReShade or another loader.

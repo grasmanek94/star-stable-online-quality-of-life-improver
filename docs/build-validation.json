@@ -1,6 +1,6 @@
 {
   "version": "1.2.2",
-  "recorded_utc": "2026-11-18T21:56:20.825734+00:00",
+  "recorded_utc": "2026-11-18T22:31:22.031942+00:00",
   "location": "linked repository working tree",
   "builds": [
     {
@@ -32,8 +32,8 @@
       "compiled_forwarder_cases": 12,
       "pe_metadata_images": 5,
       "pe_metadata_sha256": "fca4e81b7dbd1c042f9b97fbf67ca3fff9911335d34f306e145e478554545d78",
-      "junit_sha256": "dd5904fba0f01f43365af6f26c16716760973b9dd4dc943a11080e7b5240af7c",
-      "log_sha256": "291a3e57997e2cb2bd5a6910242cf9dcfac4ddec02a5a7ea77c83bce1fe78a27"
+      "junit_sha256": "8fa3a999f746a8f69b95e85b9f04bc0dcf45e359a505f8a5e173c1ecc692c069",
+      "log_sha256": "4c17e35ba3b07c90dbaabac3ebb72a9dea2cac0b43e344c6e0276daf79897ecb"
     },
     {
       "loader": "PROXY",
@@ -128,8 +128,8 @@
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
       "pe_metadata_sha256": "b6a5fb96fd3ebaf81d3590e09d17d9ba61d27a8ac6d0f85b3d7a1f49ab6a05c3",
-      "junit_sha256": "6fed9732ae361eda4a62235f921f1443b2d986c10d3aa6da635d34768831043b",
-      "log_sha256": "f33a8a81a504321cc135de9b2b839cc111c3d14c77df21bb117cfbb73727e4eb"
+      "junit_sha256": "84854dde7cecb2e7a3367d70cd5cd9e6de4e3bb9ac0102217134c2f062cbf6b4",
+      "log_sha256": "25dd294f063d4ac76f9f03a48ff743ec09bd17c0d0d47a3edb25d0577acbcad3"
     },
     {
       "loader": "RESHADE",
@@ -192,8 +192,8 @@
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
       "pe_metadata_sha256": "751a1d851c1547eec76b5559c4857c07cfbd629cdab2a7b7e7957d011a0f9eda",
-      "junit_sha256": "3caab74127834e37fcf1b671d3317283ffb7203ae10a81e28b4e68ce23a32f56",
-      "log_sha256": "a33a8d8813c58a7d3825f3d5ce324e927c13237e46db367fcf58d5b1c35e298f"
+      "junit_sha256": "3704efefaf429df05e5d1f1da9929c91f760b8e0613d9be991aed716b4b392e5",
+      "log_sha256": "e0549418de0db24313294113d9c982105b6b843c7efac80056614ac72ed25cba"
     },
     {
       "loader": "PLUGIN",
@@ -224,8 +224,8 @@
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
       "pe_metadata_sha256": "713f2d5bfc09f6cca5613f5126556485fdfc2b56ebd7437c571ce6233c49fd3e",
-      "junit_sha256": "b55362dee123cf06e64a6ee994ddaf8a2a319ddc85396ad4aa0855d09b26a6d3",
-      "log_sha256": "a0d0dc3db0f348ab8e5de8e25eb31c06ae3c902150842fa68923f11a8724569c"
+      "junit_sha256": "9e8d139dc6ebf7ac004a510d7c4df3fb011412bfe673b488de5d688891197374",
+      "log_sha256": "c3d45034a4521999d959af5e8f169998fb89e7cff42f984e0cdb0c71ee354e75"
     }
   ],
   "native_input_hashes": {
@@ -257,7 +257,7 @@
     "cmake/GenerateVersionResource.cmake": "e1f5f43e14eb5eb281742242b34997afb539fd6233f0dbb9a2545e5137f6e68b",
     "cmake/version.rc.in": "192abd789a277e065bb63ce3bf7e34207b4d4a19380f54b9d1591e1cb1922595",
     "cmake/VersionResources.cmake": "ce654dd778513a34a3716ec33453e0a3ff2db3aa8d503592e4a4005c98754257",
-    "CMakeLists.txt": "83a1e72fc5ab743622e9a075aa34280b2f22da8a17497ced943d4ef701bc0922",
+    "CMakeLists.txt": "954cc0261ee0ac92aade07fd3c45add2689664570d559cf110d8d9fc2f6314db",
     "CMakePresets.json": "d411e5c009293d10acb7b37b0aef089b75a844940feccd7302e855bae095f3b1"
   },
   "native_input_hash_format": "SHA256 after CRLF-to-LF normalization; PE/report hashes use raw bytes",

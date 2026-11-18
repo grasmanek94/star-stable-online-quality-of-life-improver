@@ -4,7 +4,7 @@
 
 The user's maintained checkout is `C:\Users\Rafal\Documents\Codex\2026-11-15\tr\outputs\Star-Stable-OpenGL-proxy-CMake\SSO-Visibility-Proxy-1.1.0-source`, remote `https://github.com/grasmanek94/star-stable-online-quality-of-life-improver.git`, branch master. The old directory name is retained; code version is **1.2.2**. Older workspace tree `sso-visibility-proxy` and original work/proxy scripts are historical snapshots. Make future changes here and build here.
 
-Read README.md, AGENTS.md, IMPLEMENTATION_STATUS.md, REQUEST_HISTORY.md, JOURNAL.md, ARCHITECTURE.md and LOADER_ADAPTERS.md. Earlier discovery and failures are in REVERSE_ENGINEERING.md and SSO-Visibility-Engineering-Handoff.md. The runtime's data/ files and MASM wrapper order are canonical; historical static addresses elsewhere are not instructions to patch a newly updated client blindly.
+Read README-DEVELOPERS.md, AGENTS.md, IMPLEMENTATION_STATUS.md, REQUEST_HISTORY.md, JOURNAL.md, ARCHITECTURE.md and LOADER_ADAPTERS.md. Earlier discovery and failures are in REVERSE_ENGINEERING.md and SSO-Visibility-Engineering-Handoff.md. The runtime's data/ files and MASM wrapper order are canonical; historical static addresses elsewhere are not instructions to patch a newly updated client blindly.
 
 ## Preserve these decisions
 
@@ -25,14 +25,13 @@ Read README.md, AGENTS.md, IMPLEMENTATION_STATUS.md, REQUEST_HISTORY.md, JOURNAL
 
 VS2026 outputs are `out/build/vs2026-x64[-reshade|-asi|-plugin]/bin/<configuration>/`. VS2022 uses corresponding names. Runtime ZIPs are `out/packages/<LOADER>/<configuration>/`. Use `-AsmTests` when optional Python/Unicorn are installed. The build wrapper preserves per-configuration `validation/ctest.xml` and `ctest.log` as well as matching private-symbol metadata. Run `python tools/record_validation.py --preset vs2026-x64` after the documented seven-build matrix to update docs/build-validation.json from those reports.
 
-After CPack runtime packages exist, make a source ZIP and optionally collect a combined bundle:
+After the four minimal CPack runtime packages exist, commit the intended changes and collect the build-only source ZIP and combined bundle:
 
 ```powershell
-cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source
-python tools/package_release.py
+python tools/package_release.py --create-source
 ```
 
-The optional standard-library collector writes `out/releases/1.2.2/`, containing all four runtime ZIPs, combined loader ZIP, complete source ZIP and manifest. It checks archive CRCs, module/metadata hashes, config dimensions and default8. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
+The optional standard-library collector writes `out/releases/1.2.2/`, containing all four runtime ZIPs, combined loader ZIP, build-only source ZIP and separate manifest. It checks exact2-file runtime/8-file combined contents, archive CRCs, module hashes against private local metadata, tested source inputs, config dimensions and default8. AI instructions, research/journal/handoff files and symbols are excluded from player/source downloads but retained in Git. README.md is now the simple public guide; README-DEVELOPERS.md retains technical build instructions. Python is not needed for the normal native build or ordinary CPack packages. Generated binaries, caches and packages remain ignored by Git.
 
 ## Evidence map and boundaries
 

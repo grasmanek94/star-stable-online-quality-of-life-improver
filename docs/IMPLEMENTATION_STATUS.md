@@ -68,7 +68,7 @@ The0.4307 sampled ms/present is an observed overlapping wrapper budget, not guar
 | Compile as standalone OpenGL proxy | SSO_HOST=PROXY / -Loader PROXY; opengl32.dll forwards368 exports to absolute System32 library |
 | Compile as ReShade addon | SSO_HOST=RESHADE / -Loader RESHADE; SSOVisibility.addon64 with registration and AddonInit/Uninit |
 | More generic loader support | ASI and PLUGIN targets; InitializeASI and explicit SSOVisibilityInitialize/Shutdown exports; shared implementation |
-| Portable source and deliverables | Complete source ZIP; per-adapter runtime ZIPs; combined four-adapter bundle; matching diagnostic metadata/maps and INI |
+| Portable source and deliverables | Build-only source ZIP; per-adapter2-file runtime ZIPs (module/INI); combined8-file four-adapter bundle; private metadata/maps remain beside local builds |
 
 The normal build has no Cheat Engine, game, IDA, Python, ReShade SDK or network dependency. Optional Python/Unicorn are isolated test/maintenance tools. Loader contracts, official reference links and placement instructions are in LOADER_ADAPTERS.md.
 
@@ -82,7 +82,8 @@ No guarantee of crash-free gameplay, exhaustive race-asset classification or FPS
 
 ## Documentation and evidence inventory
 
-- README.md: build commands, adapters, dependencies, source layout and packaging.
+- README.md: simple player introduction, releases link, install, controls, presets and account-ban warning.
+- README-DEVELOPERS.md: renamed technical README with build commands, adapters, dependencies, source layout and packaging.
 - USER_GUIDE.md: installation, all controls, full default ladder, INI keys and troubleshooting.
 - ARCHITECTURE.md:368-byte config,14 categories,21 hooks, ownership/cache/epoch logic, entry replay, ABI/restoration and update repair.
 - JOURNAL.md: discovery path, IDA APIs, RVAs/identity, census/policy, rejected approaches, implementation decisions and outstanding integration work.

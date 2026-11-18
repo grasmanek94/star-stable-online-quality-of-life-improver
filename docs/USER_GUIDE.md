@@ -2,6 +2,8 @@
 
 **Default preset 8 hides other players' riders, horses and pets. Your own remain visible.** Hiding starts off. Press F5 to enable the selected preset. The current analyzed reference is SSOClient **647.349716**. Activation discovers addresses and validates code, registry layout and local ownership; it does not require a matching version string, PE timestamp or exact image size. Future compiler/layout changes may still require an update.
 
+> **Account ban risk:** Installing and using this plugin likely violates [Star Stable's rules](https://help.starstable.com/hc/en-us/articles/4404692524946-Your-License-to-use-the-game-service) and could get your account banned. Loading it through ReShade does not imply approval.
+
 ## Install
 
 Close the game, disable previous CE visibility entries and replace the old version of this feature. Choose **one** adapter:
@@ -13,7 +15,7 @@ Close the game, disable previous CE visibility entries and replace the old versi
 | `SSOVisibility.asi` | In the scan directory of an x64 `InitializeASI`-capable loader; initialization must occur outside DllMain |
 | `SSOVisibility.dll` | Explicit plugin host loads it and calls the exported initialization function |
 
-Put **`SSOVisibility.ini` beside the chosen module**. For the proxy the previously used client directory was `C:\Users\Rafal\Desktop\StarStableOnline\Star Stable Online\client\`; verify the currently running executable's directory. If ReShade already supplies `opengl32.dll`, choose the addon instead of overwriting it. Do not copy these files into System32. Third-party loaders are not included or automatically installed. See `LOADER_ADAPTERS.md` for precise contracts.
+Each player ZIP contains only its module and `SSOVisibility.ini`. Put **`SSOVisibility.ini` beside the chosen module**. For the proxy the previously used client directory was `C:\Users\Rafal\Desktop\StarStableOnline\Star Stable Online\client\`; verify the currently running executable's directory. If ReShade already supplies `opengl32.dll`, choose the addon instead of overwriting it. Do not copy these files into System32. Third-party loaders are not included or automatically installed. See `LOADER_ADAPTERS.md` for precise contracts.
 
 Launch normally, enter the world and press F5 in the game window. F6 restores the original patched bytes and native behavior; actor fade-in may take a few seconds. Close the game before replacing/removing a module. It is pinned until process exit to retain code for in-flight calls.
 
@@ -84,13 +86,13 @@ Most NPC animal/horse classes share `CPXQuestControl`, so names distinguish thos
 `SSO-visibility.log` beside the selected module records startup, selected presets, F5/F6 and guarded read failures. Old versions used `SSO-visibility-proxy.log`. No log can mean the loader did not call initialization, the path is wrong, or the directory is unwritable. A loaded adapter in a non-SSO executable deliberately stays inactive. Only one controller can own the process.
 
 - Helper, registry-code or RTTI rejection: the current signatures or analyzed object layout need re-analysis. A matching client version is no longer required.
-- When updating the adapter, close the game first, replace only your chosen module and its matching diagnostic metadata, and retain your customized INI. The build wrapper does not install it for you.
+- When updating, close the game first, replace your chosen module and retain your customized INI. Diagnostic metadata is not needed to install or use it.
 - Signature/context mismatch: remove older visibility patches and restart cleanly before retrying.
 - Local player/horse not ready: enter the world and retry F5.
 - F6 restoration refused: switches have been set to passthrough; exact bytes/backups remain. Resolve conflicting modifications and retry F6, or restart. Do not force-unload the module.
 
-The packaged `read-proxy-state.ps1` optionally reads the selected preset, flags, counters and hook ownership. Keep `validation/proxy-symbols.json` with its exact matching module. It checks filename/hash and loaded headers before accessing private RVAs. Use 64-bit PowerShell. It does not patch, inject, activate, or suspend anything. Counters measure calls, not visible objects or FPS.
+The optional developer `tools/read-proxy-state.ps1` reads the selected preset, flags, counters and hook ownership. It and private metadata remain in the repository/local builds and are excluded from player ZIPs. Keep `validation/proxy-symbols.json` with its exact matching module. It checks filename/hash and loaded headers before accessing private RVAs. Use 64-bit PowerShell. It does not patch, inject, activate, or suspend anything. Counters measure calls, not visible objects or FPS.
 
 The previous 1.1 proxy was verified active during a live foreground trace. The new 1.2 filters/adapters pass isolated native/classifier/assembly tests, but **have not been visually verified or benchmarked in the game**. The measured 0.4307 sampled ms/present particle wrapper is a research target, not a guaranteed saving. Use the same camera/area/foreground state for comparisons and include restoration, transitions, races and local-actor visibility in live checks.
 
-The source package contains build.cmd, CMake presets, all native sources and the engineering journal. No game executable, IDB, Windows OpenGL DLL, raw ETL, Cheat Engine or third-party loader is distributed.
+The source package contains build.cmd, CMake presets, native/generated sources, tests, tools and the two READMEs. The engineering journal and research remain in the repository. No game executable, IDB, Windows OpenGL DLL, raw ETL, Cheat Engine or third-party loader is distributed.

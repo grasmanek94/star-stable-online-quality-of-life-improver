@@ -94,16 +94,6 @@ endif()
 
 install(TARGETS sso_visibility RUNTIME DESTINATION . COMPONENT Runtime)
 install(FILES config/SSOVisibility.ini DESTINATION . COMPONENT Runtime)
-install(FILES docs/USER_GUIDE.md DESTINATION . RENAME README.md COMPONENT Runtime)
-install(FILES docs/LOADER_ADAPTERS.md DESTINATION . COMPONENT Runtime)
-install(FILES docs/IMPLEMENTATION_STATUS.md DESTINATION . COMPONENT Runtime)
-install(FILES tools/read-proxy-state.ps1 DESTINATION . COMPONENT Runtime)
-install(FILES "$<TARGET_FILE_DIR:sso_visibility>/validation/proxy-symbols.json"
-    DESTINATION validation COMPONENT Runtime)
-install(FILES "$<TARGET_FILE_DIR:sso_visibility>/$<TARGET_FILE_BASE_NAME:sso_visibility>.map"
-    DESTINATION symbols COMPONENT Symbols)
-install(FILES "$<TARGET_PDB_FILE:sso_visibility>"
-    DESTINATION symbols COMPONENT Symbols OPTIONAL)
 
 set(CPACK_PACKAGE_NAME "SSO-Visibility-Proxy")
 set(CPACK_PACKAGE_VENDOR "SSO visibility proxy project")
@@ -111,10 +101,11 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Windows x64 visibility presets with OpenG
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${SSO_HOST}-win64")
 set(CPACK_GENERATOR ZIP)
+set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/packages")
 set(CPACK_SOURCE_GENERATOR ZIP)
 set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-source")
-set(CPACK_SOURCE_IGNORE_FILES "/out/;/\\.git/;/\\.vs/;/__pycache__/;\\.pyc$;CMakeUserPresets\\.json$;\\.log$")
+set(CPACK_SOURCE_IGNORE_FILES "/out/;/\\.git/;/\\.github/;/\\.vs/;/docs/;/research/;/AGENTS\\.md$;/__pycache__/;\\.pyc$;CMakeUserPresets\\.json$;\\.log$")
 include(CPack)
 
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/data/client-layout.json" sso_layout_json)
