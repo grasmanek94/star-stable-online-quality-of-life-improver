@@ -16,6 +16,8 @@ The new optional filters cover allowlisted ambient particles, broad particle sup
 
 Install Visual Studio 2022 or 2026 / Build Tools with **Desktop development with C++**, MSVC x64 tools, MASM and a Windows 10/11 SDK. Use CMake 3.25+ for VS 2022, or 4.2+ for VS 2026. The wrapper discovers the installed tools using `vswhere`.
 
+Extract source into a short path such as `C:\Projects\SSO` to avoid Windows compiler path-length limits. Spaces in the path are supported.
+
 ```powershell
 .\build.cmd                                      # OpenGL proxy, Release, tests
 .\build.cmd -Loader RESHADE -Package              # SSOVisibility.addon64
