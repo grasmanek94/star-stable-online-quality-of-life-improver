@@ -32,7 +32,8 @@ def check_ini(data):
         raise RuntimeError('Unexpected default preset in package')
 
 documentation = ('JOURNAL.md','ARCHITECTURE.md','LOADER_ADAPTERS.md','IMPLEMENTATION_STATUS.md',
-                 'REQUEST_HISTORY.md','SESSION_HANDOFF.md','PE_METADATA.md','BUILD_VALIDATION.md','build-validation.json')
+                 'REQUEST_HISTORY.md','SESSION_HANDOFF.md','PE_METADATA.md','BUILD_VALIDATION.md','build-validation.json',
+                 'updates/2026-11-18-client-647.md','updates/client-647-file-audit.json')
 source = args.source.read_bytes()
 with zipfile.ZipFile(args.source) as archive:
     if archive.testzip():
@@ -55,7 +56,8 @@ with zipfile.ZipFile(args.source) as archive:
 args.output.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(args.source, args.output/args.source.name)
 manifest = dict(version=VERSION, configuration=args.configuration, default_preset=8,
-    source_archive=dict(filename=args.source.name, sha256=sha(source)), adapters={}, live_1_2_verified=False)
+    source_archive=dict(filename=args.source.name, sha256=sha(source)), adapters={}, live_1_2_verified=False,
+    reference_client=json.loads((ROOT/'data/client-layout.json').read_text())['reference_client'], pe_version_gate=False)
 bundle = args.output/f'SSO-Visibility-{VERSION}-all-loaders.zip'
 with zipfile.ZipFile(bundle, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as target:
     target.writestr('README.md', f'# SSO Visibility {VERSION}\n\nChoose ONE adapter folder. Read its README.md and LOADER_ADAPTERS.md.\n'

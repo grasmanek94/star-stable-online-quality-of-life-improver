@@ -1,6 +1,6 @@
-# SSO Visibility 1.2.1 — Windows x64
+# SSO Visibility 1.2.2 — Windows x64
 
-**Default preset 8 hides other players' riders, horses and pets. Your own remain visible.** Hiding starts off. Press F5 to enable the selected preset. The supported object layout is SSOClient **645.348067**, PE timestamp `6AEB5BD3`, image size `014AF000`.
+**Default preset 8 hides other players' riders, horses and pets. Your own remain visible.** Hiding starts off. Press F5 to enable the selected preset. The current analyzed reference is SSOClient **647.349716**. Activation discovers addresses and validates code, registry layout and local ownership; it does not require a matching version string, PE timestamp or exact image size. Future compiler/layout changes may still require an update.
 
 ## Install
 
@@ -83,7 +83,8 @@ Most NPC animal/horse classes share `CPXQuestControl`, so names distinguish thos
 
 `SSO-visibility.log` beside the selected module records startup, selected presets, F5/F6 and guarded read failures. Old versions used `SSO-visibility-proxy.log`. No log can mean the loader did not call initialization, the path is wrong, or the directory is unwritable. A loaded adapter in a non-SSO executable deliberately stays inactive. Only one controller can own the process.
 
-- Unsupported executable layout: re-analysis is required; a signature match cannot validate new object offsets.
+- Helper, registry-code or RTTI rejection: the current signatures or analyzed object layout need re-analysis. A matching client version is no longer required.
+- When updating the adapter, close the game first, replace only your chosen module and its matching diagnostic metadata, and retain your customized INI. The build wrapper does not install it for you.
 - Signature/context mismatch: remove older visibility patches and restart cleanly before retrying.
 - Local player/horse not ready: enter the world and retry F5.
 - F6 restoration refused: switches have been set to passthrough; exact bytes/backups remain. Resolve conflicting modifications and retry F6, or restart. Do not force-unload the module.

@@ -1,10 +1,10 @@
-# SSO Visibility 1.2.1
+# SSO Visibility 1.2.2
 
-This linked repository is the maintained checkout. The local directory may still be named `SSO-Visibility-Proxy-1.1.0-source`; the project/build version is1.2.1. [Session handoff](docs/SESSION_HANDOFF.md) and [request history](docs/REQUEST_HISTORY.md) preserve the final decisions and research context. GitHub Actions is currently disabled by request; its configuration is retained as `.github/workflows/windows.yml.disabled`.
+This linked repository is the maintained checkout. The local directory may still be named `SSO-Visibility-Proxy-1.1.0-source`; the project/build version is1.2.2. [Session handoff](docs/SESSION_HANDOFF.md) and [request history](docs/REQUEST_HISTORY.md) preserve the final decisions and research context. GitHub Actions is currently disabled by request; its configuration is retained as `.github/workflows/windows.yml.disabled`.
 
-[Release1.2.1](docs/releases/1.2.1.md) packages the PE metadata update and keeps the previous release's runtime file layout, with a committed-source ZIP added.
+[Update1.2.2](docs/releases/1.2.2.md) repairs client647 compatibility, removes the PE version gate and discovers moved helpers, globals and vtables. The [repair journal](docs/updates/2026-11-18-client-647.md) records the evidence and future repair procedure.
 
-A Windows x64 visibility controller for analyzed Star Stable client **645.348067**, with a shared native C17/MASM core and four loader adapters. No Cheat Engine, Lua, game files, IDA database, downloaded SDK or Python package is required to build or run it.
+A Windows x64 visibility controller for analyzed Star Stable client **647.349716**, with a shared native C17/MASM core and four loader adapters. No Cheat Engine, Lua, game files, IDA database, downloaded SDK or Python package is required to build or run it.
 
 **Default preset 8 hides other players' riders, horses and pets only.** Hiding starts off; F5 enables the selected preset, F6 restores native code. Ctrl+Numpad0 applies all supported filters; Ctrl+Numpad1–9 applies editable presets. Defaults 0–4 are aggressive and 5–9 use gameplay guards. F7 reloads `SSOVisibility.ini`. Keep NumLock on.
 
@@ -82,7 +82,7 @@ Unicorn and Python are test tools only. Normal builds do not fetch dependencies.
 
 Builds emit a matching map and `validation/proxy-symbols.json` with the DLL hash and current private RVAs. The read-only diagnostic refuses a loaded module that does not match. Never reuse a previous build's config address. [BUILD_VALIDATION.md](docs/BUILD_VALIDATION.md) records the exact checked configurations and limits.
 
-The older 1.1 proxy was measured active in a live foreground capture. **The new 1.2 particle filters and loader adapters have isolated tests, but no live visual/FPS result yet.** The 0.4307 sampled ms/present particle cost motivates the experiment; it is not a promised saving. PE/object guards remain specific to 645.348067; AOB scans alone do not establish compatibility with future clients.
+The older 1.1 proxy was measured active in a live foreground capture. **The new 1.2 particle filters and loader adapters have isolated tests, but no live visual/FPS result yet.** The 0.4307 sampled ms/present particle cost motivates the experiment; it is not a promised saving. There is no timestamp/version/image-size allowlist. Relocation-masked AOBs, helper fingerprints, RIP-relative global discovery and exact class RTTI allow address changes while retaining ownership and registry checks. Compiler, control-flow and object-layout changes can still require repair; matching bytes do not prove live gameplay safety.
 
 ## Packaging and maintenance
 
@@ -93,7 +93,7 @@ cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake
 
 Runtime packages include the chosen adapter, default INI, guide, loader notes, read-only diagnostic and matching symbols. The source ZIP includes all committed build inputs and research notes, excluding `out/`, caches, the client, IDB and raw ETLs.
 
-After building all four Release adapters with `-Package`, create the source ZIP with `cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source`. Optional `python tools/package_release.py` collects verified runtime/source ZIPs and a combined bundle under `out/releases/1.2.1/`. Optional `python tools/record_validation.py` records matching per-configuration CTest evidence after the seven-build matrix. The native build and ordinary CPack packaging do not require these Python utilities.
+After building all four Release adapters with `-Package`, create the source ZIP with `cpack --config out/build/vs2026-x64/CPackSourceConfig.cmake -B out/packages/source`. Optional `python tools/package_release.py` collects verified runtime/source ZIPs and a combined bundle under `out/releases/1.2.2/`. Optional `python tools/record_validation.py` records matching per-configuration CTest evidence after the seven-build matrix. The native build and ordinary CPack packaging do not require these Python utilities.
 
 Start maintenance with [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [JOURNAL.md](docs/JOURNAL.md). Earlier actor/NPC analysis is retained in [REVERSE_ENGINEERING.md](docs/REVERSE_ENGINEERING.md); its old DLL hashes and absolute paths are historical.
 

@@ -1,4 +1,4 @@
-# Architecture and maintenance — 1.2.0
+# Architecture and maintenance — 1.2.2
 
 ## Source ownership
 
@@ -48,17 +48,17 @@ There are **21 ordered hooks**. `visibility-sites.json` order maps to HideHook_0
 
 | Index | Site RVA | Kind / destination |
 |---|---|---|
-| 18 | 0x10AEC0 | Extended particle entry E9; native continuation entry+5, child dispatcher 0xB3390 |
-| 19 | 0x1129F8 | Legacy particle visual-gate CALL; native target 0xCF220 |
-| 20 | 0x24158E | Detail-grass void helper CALL; native target 0x2415D0 |
+| 18 | 0x104E50 | Extended particle entry E9; native continuation entry+5, discovered child dispatcher (reference0xAD050) |
+| 19 | 0x10C888 | Legacy particle visual-gate CALL; discovered native target (reference0xC8AD0) |
+| 20 | 0x23A98E | Detail-grass void helper CALL; discovered native target (reference0x23A9D0) |
 
 Most sites replace only a five-byte E8 CALL. Hook 18 replaces one complete five-byte instruction `48 89 5C 24 08` with E9. Preparation validates its full 179-byte function window and final native child-tail-jump destination. Signature/backup buffers support up to 256 bytes, but only five bytes are written. No instruction splitting or generic trampoline decoder is used.
 
-HideHook_18 has a Windows unwind frame: subtract RSP by 0xC8, `.allocstack`, `.endprolog`. When filtering is needed it saves volatile GPRs and XMM0–5 around the C decision. Native passthrough writes RBX to `[allocated RSP+0xD0]` (original RSP+8), replays the stolen instruction, restores RSP and tail-jumps to entry+5. Hidden path restores arguments/RSP and tail-jumps to native child dispatcher 0xB3390 **once**. Both destinations receive the native entry stack, return address, nonvolatile registers and stack arguments. The home-space write happens before the epilogue's stack restore so unwind metadata remains valid. Incoming condition flags are not an entry-call contract.
+HideHook_18 has a Windows unwind frame: subtract RSP by 0xC8, `.allocstack`, `.endprolog`. When filtering is needed it saves volatile GPRs and XMM0–5 around the C decision. Native passthrough writes RBX to `[allocated RSP+0xD0]` (original RSP+8), replays the stolen instruction, restores RSP and tail-jumps to entry+5. Hidden path restores arguments/RSP and tail-jumps to discovered native child dispatcher (647 reference0xAD050) **once**. Both destinations receive the native entry stack, return address, nonvolatile registers and stack arguments. The home-space write happens before the epilogue's stack restore so unwind metadata remains valid. Incoming condition flags are not an entry-call contract.
 
 HideHook_19 first runs the native gate, preserves native false, and only forces AL=0 for a selected emitter. The caller's original children path remains. HideHook_20 has a matching unwindable save frame and either tail-calls the original void helper or returns with restored arguments/stack. The new Ex/grass wrappers have direct inactive/flag-off fast paths; the original wrappers keep their established ABI handling. Tests model volatile helper clobbers, SIMD arguments, stack arguments, original gate results and far relocation.
 
-Near-game 16-byte `FF 25 [rip+0]` thunks hold absolute DLL wrapper addresses, allowing a DLL outside signed rel32 range. Actual patched sites point to those near thunks. g_originals[18] uniquely stores entry+5; g_particleChildren separately stores base+0xB3390. Do not treat every g_originals entry as a full native function entry.
+Near-game 16-byte `FF 25 [rip+0]` thunks hold absolute DLL wrapper addresses, allowing a DLL outside signed rel32 range. Actual patched sites point to those near thunks. g_originals[18] uniquely stores entry+5; g_particleChildren separately stores the decoded native child-tail destination. Do not treat every g_originals entry as a full native function entry.
 
 F5 checks client headers, local player/horse layout, all unique signatures and native destinations before allocating/preparing. It allocates cache/thunks before pausing other threads, then bounds retries, checks instruction pointers and entire saved context windows, changes page protection, writes five bytes, flushes the instruction cache and resumes handles on all cleanup paths. F6 sets master off first and restores only exact owned/original bytes. Unknown modifications are never overwritten. Exceptional partial writes retain recovery state. Thread suspension is not a complete synchronization proof.
 
@@ -70,8 +70,8 @@ Use MSVC C17, C++17 only for adapters, x64 MASM, /MT or /MTd, ASLR and NX. Incre
 
 Each link writes filename/hash/header-bound symbol metadata using its own map. `read-proxy-state.ps1` selects that filename/hash, verifies loaded headers, and knows E9 entry ownership versus E8 native calls. Never reuse old g_config RVAs across builds or assume matching source implies matching DLL bytes. Counters are diagnostic calls, not on-screen objects or time measurements.
 
-Client baseline: 645.348067, timestamp 6AEB5BD3, image size 014AF000, SHA256 `3cec805521c70b64f1a33c5a0efa67679b8112dacbe9594ab1b47301b4d3de8d`. Registry/global and vtable RVAs remain build-specific. AOB scanning tolerates relocation but this release deliberately refuses a different object layout; do not remove guards to claim automatic update support.
+Current reference647.349716: timestamp6AF719CF, image014C1000, SHA256 `62387b246a92a4874d20329caa6eaf06c7a29830263e94982a8bdad6b6110fe1`. These identify analyzed evidence and are not activation gates. `data/client-layout.json` provides relocation-masked helper-body proofs, binding instruction locations and exact RTTI names. The runtime derives native targets from CALL/E9 instructions, enforces shared-target/call-graph relationships, derives writable globals from RIP-relative operands, validates native registry stride/generation/index/object code, and finds unique primary MSVC RTTI vtables in read-only data. It then checks live local rider/horse generations, types, control bits and horse ownership. `g_patchSites` records actual discovered patch addresses for diagnostics. Full observed windows are saved for exact F6 restoration; wildcarded bytes are never restored from the reference fixture. Compiler/semantic/object-layout changes remain a repair boundary. See [the client647 journal](updates/2026-11-18-client-647.md).
 
-For a new client, retain clean executable identity, reopen its database via official IDA MCP, and follow [the journal's repair checklist](JOURNAL.md). Verify roles, gates, self registers, return types, child tail, stolen instruction, object fields and cleanup paths, not just byte matches. Update guards and canonical data together with wrappers/fixtures/tests. Regenerate assets; build native/classifier/assembly suites; package matching DLL/INI/metadata. User visual/restoration/transitions/race checks and a controlled foreground performance trace are separate required evidence before claiming a live improvement.
+For a new client, retain clean executable identity, reopen its database via official IDA MCP, and follow [the journal's repair checklist](JOURNAL.md). Verify roles, gates, self registers, return types, child tail, stolen instruction, object fields and cleanup paths, not just byte matches. Update semantic proofs and canonical data together with wrappers/fixtures/tests. Regenerate assets; build native/classifier/assembly suites; package matching DLL/INI/metadata. User visual/restoration/transitions/race checks and a controlled foreground performance trace are separate required evidence before claiming a live improvement.
 
 Read-only IDA exports and exact patch plans are in `docs/research/particles/`. No complete executable or database is bundled. [BUILD_VALIDATION.md](BUILD_VALIDATION.md) distinguishes tested helper behavior from the earlier live 1.1 capture and still-unverified 1.2 behavior.

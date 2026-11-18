@@ -37,17 +37,21 @@ try{
  $prepared=[BitConverter]::ToInt64($cfg,64)
  if($prepared -ne 0 -and $prepared -ne $base){throw 'Config image pointer does not match the running client.'}
  $categories=@();for($i=0;$i -lt $meta.categories.Count;$i++){$categories+=[ordered]@{Name=$meta.categories[$i];Hide=[int]$cfg[16+$i];NativeHideCalls=[BitConverter]::ToUInt64($cfg,256+8*$i)}}
- $gameNt=$base+(ReadProxyUInt32 ($base+0x3C));$known=(ReadProxyUInt32 ($gameNt+8)) -eq 0x6AEB5BD3 -and (ReadProxyUInt32 ($gameNt+24+56)) -eq 0x014AF000
+ $gameNt=$base+(ReadProxyUInt32 ($base+0x3C));$gameSize=ReadProxyUInt32 ($gameNt+24+56)
+ $known=$prepared -ne 0 -and $prepared -eq $base
  $hooks=@()
- if($known){foreach($spec in $meta.hooks){
-  $at=$base+(ParseProxyHex $spec.patch_rva);$b=ReadProxyBytes $at 5;$expectedOpcode=if($spec.kind -eq 'particle_entry'){0xE9}else{0xE8};$target=if($b[0] -eq $expectedOpcode){$at+5+[BitConverter]::ToInt32($b,1)}else{[long]0}
+ if($known){for($i=0;$i -lt $meta.hooks.Count;$i++){$spec=$meta.hooks[$i]
+  $at=if($meta.symbols.g_patchSites){[BitConverter]::ToInt64((ReadProxyBytes ($dllBase+(ParseProxyHex $meta.symbols.g_patchSites.rva)+8*$i) 8),0)}else{$base+(ParseProxyHex $spec.patch_rva)}
+  if($at-$spec.patch_offset -lt $base -or $at-$spec.patch_offset+$spec.original_window.Length -gt $base+$gameSize){throw 'Prepared hook lies outside the client image.'}
+  $nativeTarget=[BitConverter]::ToInt64((ReadProxyBytes ($dllBase+(ParseProxyHex $meta.symbols.g_originals.rva)+8*$i) 8),0)
+  $b=ReadProxyBytes $at 5;$expectedOpcode=if($spec.kind -eq 'particle_entry'){0xE9}else{0xE8};$target=if($b[0] -eq $expectedOpcode){$at+5+[BitConverter]::ToInt32($b,1)}else{[long]0}
   $owned=$false
-  if($target -gt 0x10000 -and $target -ne ($base+(ParseProxyHex $spec.target_rva))){
+  if($target -gt 0x10000 -and $target -ne $nativeTarget){
    try{$t=ReadProxyBytes $target 14;$owned=$t[0] -eq 0xFF -and $t[1] -eq 0x25 -and [BitConverter]::ToUInt32($t,2) -eq 0 -and [BitConverter]::ToInt64($t,6) -eq ($dllBase+(ParseProxyHex $spec.wrapper_rva))}catch{}
   }
-  $window=ReadProxyBytes ($base+(ParseProxyHex $spec.match_rva)) $spec.original_window.Length;$context=$true
-  for($j=0;$j -lt $window.Length;$j++){if($j -ge $spec.patch_offset -and $j -lt ($spec.patch_offset+5)){continue};if($window[$j] -ne $spec.original_window[$j]){$context=$false}}
-  $hooks+=[ordered]@{Name=$spec.name;OwnedByProxy=$owned;NativeOriginalTarget=$(if($spec.kind -eq 'particle_entry'){([BitConverter]::ToString($b)) -eq ([BitConverter]::ToString([byte[]]$spec.original_window[0..4]))}else{$target -eq ($base+(ParseProxyHex $spec.target_rva))});SurroundingContextMatches=$context;Target=('0x{0:X}'-f $target)}
+  $window=ReadProxyBytes ($at-$spec.patch_offset) $spec.original_window.Length;$context=$true
+  for($j=0;$j -lt $window.Length;$j++){if(($j -ge $spec.patch_offset -and $j -lt ($spec.patch_offset+5)) -or ($spec.pattern_mask -and $spec.pattern_mask[$j] -eq 0)){continue};if($window[$j] -ne $spec.original_window[$j]){$context=$false}}
+  $hooks+=[ordered]@{Name=$spec.name;OwnedByProxy=$owned;NativeOriginalTarget=$(if($spec.kind -eq 'particle_entry'){([BitConverter]::ToString($b)) -eq ([BitConverter]::ToString([byte[]]$spec.original_window[0..4]))}else{$target -eq $nativeTarget});SurroundingContextMatches=$context;Target=('0x{0:X}'-f $target)}
  }}
  $currentPreset=if($meta.symbols.g_currentPreset){ReadProxyUInt32 ($dllBase+(ParseProxyHex $meta.symbols.g_currentPreset.rva))}else{$null}
  [ordered]@{Preset=$currentPreset;ProtectGameplay=[int]$cfg[$meta.protect_gameplay_offset];CapturedUtc=(Get-Date).ToUniversalTime().ToString('o');Pid=$game.Id;ProxyPath=$expected;ProxyBase=('0x{0:X}'-f $dllBase);ConfigAddress=('0x{0:X}'-f $cfgAddress);Prepared=($prepared -ne 0);Active=[int]$cfg[0];CacheCapacity=[BitConverter]::ToUInt32($cfg,96);Epoch=[BitConverter]::ToUInt32($cfg,100);KnownGameLayout=$known;Categories=$categories;Hooks=$hooks} | ConvertTo-Json -Depth 8

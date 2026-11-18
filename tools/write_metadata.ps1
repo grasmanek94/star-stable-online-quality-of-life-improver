@@ -18,7 +18,7 @@ foreach ($match in [regex]::Matches($map, '(?m)^\s+[0-9A-Fa-f]{4}:[0-9A-Fa-f]{8}
     $symbols[$match.Groups[1].Value] = [Convert]::ToUInt64($match.Groups[2].Value, 16) - $base
 }
 $layout=Get-Content -Raw -LiteralPath $LayoutPath | ConvertFrom-Json
-$selected = @('g_config','g_originals','ProxyHideActor','ProxyHideVisual','ProxyHideFlag','ProxyHideParticles','g_particleChildren')
+$selected = @('g_config','g_originals','g_patchSites','ProxyHideActor','ProxyHideVisual','ProxyHideFlag','ProxyHideParticles','g_particleChildren')
 $selected += @(0..($layout.hook_count-1) | ForEach-Object { 'HideHook_' + $_ })
 foreach($optional in @('g_glFunctions','ProxyInitialize','ProxyResolve','g_currentPreset')){if($symbols.ContainsKey($optional)){$selected+=$optional}}
 $symbolInfo = [ordered]@{}
@@ -32,7 +32,8 @@ $hooks = @(); $index = 0
 foreach ($property in $sites.PSObject.Properties) {
     $site = $property.Value
     $window = @($site.window.Split(' ', [StringSplitOptions]::RemoveEmptyEntries) | ForEach-Object { [Convert]::ToInt32($_, 16) })
-    $hooks += [ordered]@{name=$property.Name; match_rva=$site.rva; patch_rva=$site.patch_rva; patch_offset=$site.patch_offset; target_rva=$site.target_rva; wrapper_rva=('0x{0:x}' -f $symbols['HideHook_' + $index]); kind=$(if($site.kind){$site.kind}else{'call'}); original_window=$window}
+    $patternMask=@($site.pattern.Split(' ',[StringSplitOptions]::RemoveEmptyEntries) | ForEach-Object {if($_ -eq '??'){0}else{255}})
+    $hooks += [ordered]@{name=$property.Name; match_rva=$site.rva; patch_rva=$site.patch_rva; patch_offset=$site.patch_offset; target_rva=$site.target_rva; wrapper_rva=('0x{0:x}' -f $symbols['HideHook_' + $index]); kind=$(if($site.kind){$site.kind}else{'call'}); original_window=$window; pattern_mask=$patternMask}
     $index++
 }
 if ($hooks.Count -ne $layout.hook_count) { throw 'Hook count drift: update metadata and runtime together.' }

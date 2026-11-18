@@ -1,5 +1,5 @@
 add_executable(sso_runtime_tests
-    runtime_tests.c ../src/visibility/visibility_runtime.c ../src/asm/visibility_hooks.asm)
+    runtime_tests.c client_audit.c ../src/visibility/visibility_runtime.c ../src/asm/visibility_hooks.asm)
 sso_configure_test(sso_runtime_tests)
 target_compile_definitions(sso_runtime_tests PRIVATE SSO_PROXY_TESTING)
 target_include_directories(sso_runtime_tests PRIVATE ../include ../generated ../src/visibility)

@@ -4,24 +4,27 @@
 #include <limits.h>
 #include <tlhelp32.h>
 #include "classifier.inc"
+#include "layout_specs.inc"
 
 typedef struct {
     const char *name;
     const BYTE *pattern,*mask;
     SIZE_T length,offset;
-    DWORD targetRva;
+    DWORD referenceTargetRva;
     void *wrapper;
     BOOL entry;
+    unsigned targetGroup;
 } HookSpec;
 #include "hook_specs.inc"
 void *g_originals[HOOK_COUNT];
+void *g_patchSites[HOOK_COUNT];
 void *g_particleChildren;
 const char *g_categoryNames[14]={"other player horses","other player characters","other player pets",
     "NPC pets / ambient animals (name based)","NPC actors / unclassified NPC models","NPC horses (name based)",
     "standalone riderless horses","sale / display horses","coins / collectible visuals","quest ? / ! markers","NPC floating text / speech bubbles",
     "allowlisted ambient particles","ALL particle visuals (broad)","detail grass"};
 typedef struct {
-    BYTE *window,*call,*thunk;
+    BYTE *window,*call,*thunk,*nativeTarget;
     BYTE original[256],patched[256];
     SIZE_T length,offset;
 } Hook;
@@ -75,17 +78,30 @@ static BOOL ImageHeaders(BYTE *base,IMAGE_NT_HEADERS64 **out){
     if(!base||dos->e_magic!=IMAGE_DOS_SIGNATURE||dos->e_lfanew<0x40||dos->e_lfanew>0x1000)return FALSE;
     IMAGE_NT_HEADERS64 *nt=(IMAGE_NT_HEADERS64*)(base+dos->e_lfanew);
     if(nt->Signature!=IMAGE_NT_SIGNATURE||nt->FileHeader.Machine!=IMAGE_FILE_MACHINE_AMD64||nt->OptionalHeader.Magic!=IMAGE_NT_OPTIONAL_HDR64_MAGIC)return FALSE;
-    if(nt->FileHeader.TimeDateStamp!=0x6AEB5BD3||nt->OptionalHeader.SizeOfImage!=0x014AF000||nt->FileHeader.NumberOfSections<1||nt->FileHeader.NumberOfSections>96)return FALSE;
+    if(nt->FileHeader.NumberOfSections<1||nt->FileHeader.NumberOfSections>96||nt->FileHeader.SizeOfOptionalHeader<sizeof(IMAGE_OPTIONAL_HEADER64))return FALSE;
+    SIZE_T headersEnd=(SIZE_T)dos->e_lfanew+24+nt->FileHeader.SizeOfOptionalHeader+(SIZE_T)nt->FileHeader.NumberOfSections*sizeof(IMAGE_SECTION_HEADER);
+    if(nt->OptionalHeader.SizeOfHeaders<headersEnd||nt->OptionalHeader.SizeOfImage<nt->OptionalHeader.SizeOfHeaders)return FALSE;
     *out=nt;return TRUE;
 }
-static BOOL Executable(IMAGE_NT_HEADERS64 *nt,DWORD rva,SIZE_T length){
+static BOOL SectionRange(IMAGE_NT_HEADERS64 *nt,DWORD rva,SIZE_T length,DWORD required,DWORD forbidden){
+    if((U64)rva+length>nt->OptionalHeader.SizeOfImage)return FALSE;
     IMAGE_SECTION_HEADER *sections=IMAGE_FIRST_SECTION(nt);
     for(unsigned i=0;i<nt->FileHeader.NumberOfSections;i++){
         DWORD size=sections[i].Misc.VirtualSize>sections[i].SizeOfRawData?sections[i].Misc.VirtualSize:sections[i].SizeOfRawData;
-        if((sections[i].Characteristics&IMAGE_SCN_MEM_EXECUTE)&&rva>=sections[i].VirtualAddress&&(U64)rva+length<=(U64)sections[i].VirtualAddress+size)return TRUE;
+        DWORD flags=sections[i].Characteristics;
+        if((flags&required)==required&&!(flags&forbidden)&&rva>=sections[i].VirtualAddress&&(U64)rva+length<=(U64)sections[i].VirtualAddress+size)return TRUE;
     }
     return FALSE;
 }
+static BOOL PointerRange(BYTE *base,IMAGE_NT_HEADERS64 *nt,const void *pointer,SIZE_T length,DWORD required,DWORD forbidden){
+    UINT_PTR at=(UINT_PTR)pointer,start=(UINT_PTR)base;
+    return at>=start&&(U64)(at-start)+length<=nt->OptionalHeader.SizeOfImage&&SectionRange(nt,(DWORD)(at-start),length,required,forbidden);
+}
+static BOOL PatternMatches(const BYTE *bytes,const BYTE *pattern,const BYTE *mask,SIZE_T length){
+    for(SIZE_T i=0;i<length;i++)if(mask[i]&&bytes[i]!=pattern[i])return FALSE;
+    return TRUE;
+}
+static BYTE *RelativeTarget(const BYTE *instruction){INT32 displacement;memcpy(&displacement,instruction+1,4);return (BYTE*)((INT64)(UINT_PTR)instruction+5+displacement);}
 static BYTE *FindUnique(BYTE *base,IMAGE_NT_HEADERS64 *nt,const HookSpec *spec){
     IMAGE_SECTION_HEADER *sections=IMAGE_FIRST_SECTION(nt);BYTE *found=NULL;
     for(unsigned s=0;s<nt->FileHeader.NumberOfSections;s++){
@@ -102,14 +118,88 @@ static BYTE *FindUnique(BYTE *base,IMAGE_NT_HEADERS64 *nt,const HookSpec *spec){
     }
     return found;
 }
-static BOOL LocalLayout(BYTE *base){
-    U64 registry=Q((U64)base,0x1379EF0);if(!registry)return FALSE;
+static BOOL LocalLayout(U64 registryAddress,U64 localRef,U64 playerVtable,U64 horseVtable){
+    U64 registry=Q(registryAddress,0);if(!registry)return FALSE;
     U64 begin=Q(registry,0),end=Q(registry,8);
     if(!begin||end<begin||end-begin>0x10000000||((end-begin)&63))return FALSE;
-    U64 count=(end-begin)>>6,player=resolve(begin,count,(U64)base+0x1302F28);
-    if(!player||Q(player,0)!=(U64)base+0xFE4770||!(B(player,144)&4))return FALSE;
+    U64 count=(end-begin)>>6,player=resolve(begin,count,localRef);
+    if(!player||Q(player,0)!=playerVtable||!(B(player,144)&4))return FALSE;
     U64 horse=resolve(begin,count,player+1608);
-    return horse&&Q(horse,0)==(U64)base+0xF10600&&(B(horse,144)&4);
+    return horse&&Q(horse,0)==horseVtable&&(B(horse,144)&4)&&resolve(begin,count,horse+152)==player;
+}
+/* Resolve exact primary RTTI identities instead of trusting vtable RVAs. */
+static BOOL ResolveVtables(BYTE *base,IMAGE_NT_HEADERS64 *nt,U64 found[RTTI_CLASS_COUNT]){
+    IMAGE_SECTION_HEADER *sections=IMAGE_FIRST_SECTION(nt);ZeroMemory(found,RTTI_CLASS_COUNT*sizeof(*found));
+    for(unsigned s=0;s<nt->FileHeader.NumberOfSections;s++){
+        IMAGE_SECTION_HEADER *section=&sections[s];DWORD flags=section->Characteristics;
+        if(!(flags&IMAGE_SCN_MEM_READ)||(flags&(IMAGE_SCN_MEM_EXECUTE|IMAGE_SCN_MEM_WRITE)))continue;
+        SIZE_T size=section->Misc.VirtualSize>section->SizeOfRawData?section->Misc.VirtualSize:section->SizeOfRawData;
+        if((U64)section->VirtualAddress+size>nt->OptionalHeader.SizeOfImage)return FALSE;
+        for(SIZE_T at=0;at+16<=size;at+=8){
+            BYTE *slot=base+section->VirtualAddress+at,*col=(BYTE*)(UINT_PTR)Q((U64)slot,0);
+            if(!PointerRange(base,nt,col,24,IMAGE_SCN_MEM_READ,IMAGE_SCN_MEM_EXECUTE))continue;
+            if(D((U64)col,0)!=1||D((U64)col,4)!=0||D((U64)col,8)!=0||D((U64)col,20)!=(DWORD)(col-base))continue;
+            DWORD typeRva=D((U64)col,12);if((U64)typeRva+16>=nt->OptionalHeader.SizeOfImage)continue;
+            BYTE *name=base+typeRva+16,*vtable=slot+8;
+            for(unsigned i=0;i<RTTI_CLASS_COUNT;i++){
+                SIZE_T length=strlen(g_rttiNames[i])+1;
+                if(!PointerRange(base,nt,name,length,IMAGE_SCN_MEM_READ,IMAGE_SCN_MEM_EXECUTE)||memcmp(name,g_rttiNames[i],length))continue;
+                if(!PointerRange(base,nt,vtable,15*8,IMAGE_SCN_MEM_READ,IMAGE_SCN_MEM_EXECUTE))return FALSE;
+                U64 first=Q((U64)vtable,0),update=Q((U64)vtable,14*8);
+                if(!PointerRange(base,nt,(void*)(UINT_PTR)first,1,IMAGE_SCN_MEM_EXECUTE,0)||!PointerRange(base,nt,(void*)(UINT_PTR)update,1,IMAGE_SCN_MEM_EXECUTE,0))return FALSE;
+                if(found[i]&&found[i]!=(U64)vtable){ProxyLog("F5 rejected: ambiguous RTTI identity %s.",g_rttiNames[i]);return FALSE;}
+                found[i]=(U64)vtable;
+            }
+        }
+    }
+    for(unsigned i=0;i<RTTI_CLASS_COUNT;i++)if(!found[i]){ProxyLog("F5 rejected: RTTI identity missing: %s.",g_rttiNames[i]);return FALSE;}
+    return TRUE;
+}
+static BOOL ResolveTargetsAndBindings(BYTE *base,IMAGE_NT_HEADERS64 *nt,Hook hooks[HOOK_COUNT],U64 bindings[2]){
+    BYTE *targets[TARGET_GROUP_COUNT]={0},*resolver=NULL;
+    for(unsigned i=0;i<HOOK_COUNT;i++){
+        unsigned group=g_specs[i].targetGroup;
+        if(group>=TARGET_GROUP_COUNT)return FALSE;
+        if(targets[group]&&targets[group]!=hooks[i].nativeTarget){ProxyLog("F5 rejected: helper relationship differs for %s.",g_targetGroups[group].name);return FALSE;}
+        targets[group]=hooks[i].nativeTarget;
+    }
+    for(unsigned i=0;i<TARGET_GROUP_COUNT;i++){
+        const TargetGroup *group=&g_targetGroups[i];
+        if(!targets[i]||!PointerRange(base,nt,targets[i],group->length,IMAGE_SCN_MEM_EXECUTE,0)||!PatternMatches(targets[i],group->pattern,group->mask,group->length)){
+            ProxyLog("F5 rejected: helper body does not validate: %s.",group->name);return FALSE;
+        }
+    }
+    for(unsigned i=0;i<2;i++){
+        const BindingSpec *spec=&g_bindings[i];BYTE *source=targets[spec->sourceGroup];
+        if(spec->sourceCallOffset>=0){
+            BYTE *call=source+spec->sourceCallOffset;
+            if(!PointerRange(base,nt,call,5,IMAGE_SCN_MEM_EXECUTE,0)||call[0]!=0xE8)return FALSE;
+            source=RelativeTarget(call);if(i==0)resolver=source;
+        }
+        if(!PointerRange(base,nt,source,spec->length,IMAGE_SCN_MEM_EXECUTE,0)||!PatternMatches(source,spec->pattern,spec->mask,spec->length)){
+            ProxyLog("F5 rejected: binding code differs: %s.",spec->name);return FALSE;
+        }
+        INT32 displacement;memcpy(&displacement,source+spec->displacementOffset,4);
+        BYTE *address=(BYTE*)((INT64)(UINT_PTR)source+spec->instructionEnd+displacement);
+        if(!PointerRange(base,nt,address,spec->span,IMAGE_SCN_MEM_READ|IMAGE_SCN_MEM_WRITE,IMAGE_SCN_MEM_EXECUTE))return FALSE;
+        bindings[i]=(U64)address;
+    }
+    /* The getter's near JNZ reaches the record resolver. Keep its stride,
+       generation/index and object offsets checked even when addresses move. */
+    INT32 recordDisplacement;memcpy(&recordDisplacement,resolver+15,4);
+    BYTE *records=(BYTE*)((INT64)(UINT_PTR)resolver+19+recordDisplacement);
+    if(!PointerRange(base,nt,records,sizeof(registry_records_pattern),IMAGE_SCN_MEM_EXECUTE,0)||
+       !PatternMatches(records,registry_records_pattern,registry_records_mask,sizeof(registry_records_pattern))){
+        ProxyLog("F5 rejected: registry record structure code differs.");return FALSE;
+    }
+    for(unsigned i=0;i<TARGET_GROUP_COUNT;i++)for(SIZE_T j=0;j<g_targetGroups[i].relationCount;j++){
+        const TargetRelation *relation=&g_targetGroups[i].relations[j];BYTE *instruction=targets[i]+relation->offset;
+        BYTE *expected=relation->targetGroup<0?resolver:targets[relation->targetGroup];
+        if(!PointerRange(base,nt,instruction,5,IMAGE_SCN_MEM_EXECUTE,0)||instruction[0]!=relation->opcode||RelativeTarget(instruction)!=expected){
+            ProxyLog("F5 rejected: helper call/tail relationship differs: %s.",g_targetGroups[i].name);return FALSE;
+        }
+    }
+    return TRUE;
 }
 static BYTE *AllocateNear(BYTE *base,SIZE_T size){
     SYSTEM_INFO si;GetSystemInfo(&si);UINT_PTR gran=si.dwAllocationGranularity;
@@ -127,12 +217,8 @@ static BYTE *AllocateNear(BYTE *base,SIZE_T size){
     }
     return NULL;
 }
-static BOOL Prepare(BYTE *base){
-    IMAGE_NT_HEADERS64 *nt;
-    if(!ImageHeaders(base,&nt)){ProxyLog("F5 rejected: unsupported executable layout; expected 645.348067. OpenGL forwarding continues.");return FALSE;}
-    if(!LocalLayout(base)){ProxyLog("F5 rejected: local player/horse not ready or ownership layout differs. Enter the world and retry.");return FALSE;}
-    if(g_ready)return base==g_image;
-    Hook temporary[HOOK_COUNT];ZeroMemory(temporary,sizeof(temporary));
+static BOOL Discover(BYTE *base,IMAGE_NT_HEADERS64 *nt,Hook temporary[HOOK_COUNT],U64 bindings[2],U64 vtables[RTTI_CLASS_COUNT]){
+    ZeroMemory(temporary,HOOK_COUNT*sizeof(*temporary));
     for(unsigned i=0;i<HOOK_COUNT;i++){
         const HookSpec *spec=&g_specs[i];BYTE *window=FindUnique(base,nt,spec);
         if(!window||spec->length>256){ProxyLog("F5 rejected: %s signature missing/ambiguous. Disable all CE visibility entries first.",spec->name);return FALSE;}
@@ -143,13 +229,28 @@ static BOOL Prepare(BYTE *base){
             if(spec->length<10||!Equal(call,stolen,5)||window[spec->length-5]!=0xE9)return FALSE;
             memcpy(&relative,window+spec->length-4,4);target=window+spec->length+relative;
         }else{memcpy(&relative,call+1,4);target=call+5+relative;}
-        if((!spec->entry&&call[0]!=0xE8)||target!=base+spec->targetRva||!Executable(nt,spec->targetRva,1)){
-            ProxyLog("F5 rejected: %s call target differs (possible active CE hook).",spec->name);return FALSE;
+        if((!spec->entry&&call[0]!=0xE8)||!PointerRange(base,nt,target,1,IMAGE_SCN_MEM_EXECUTE,0)){
+            ProxyLog("F5 rejected: %s does not resolve to executable game code.",spec->name);return FALSE;
         }
-        temporary[i].window=window;temporary[i].call=call;temporary[i].length=spec->length;temporary[i].offset=spec->offset;
+        temporary[i].window=window;temporary[i].call=call;temporary[i].nativeTarget=target;temporary[i].length=spec->length;temporary[i].offset=spec->offset;
         memcpy(temporary[i].original,window,spec->length);memcpy(temporary[i].patched,window,spec->length);
     }
-    U64 registry=Q((U64)base,0x1379EF0),count=(Q(registry,8)-Q(registry,0))>>6;
+    return ResolveTargetsAndBindings(base,nt,temporary,bindings)&&ResolveVtables(base,nt,vtables);
+}
+static BOOL Prepare(BYTE *base){
+    IMAGE_NT_HEADERS64 *nt;
+    if(!ImageHeaders(base,&nt)){ProxyLog("F5 rejected: invalid Windows x64 PE headers. OpenGL forwarding continues.");return FALSE;}
+    if(g_ready){
+        BOOL valid=base==g_image&&LocalLayout(g_config.registryAddress,g_config.localRefAddress,g_config.playerSSO,g_config.horse);
+        if(!valid)ProxyLog("F5 rejected: prepared image/local ownership no longer validates. Enter the world and retry.");
+        return valid;
+    }
+    Hook temporary[HOOK_COUNT];U64 bindings[2],vtables[RTTI_CLASS_COUNT];
+    if(!Discover(base,nt,temporary,bindings,vtables))return FALSE;
+    if(!LocalLayout(bindings[0],bindings[1],vtables[SSO_VT_PLAYERSSO],vtables[SSO_VT_HORSE])){
+        ProxyLog("F5 rejected: local player/horse not ready or ownership/registry structure differs. Enter the world and retry.");return FALSE;
+    }
+    U64 registry=Q(bindings[0],0),count=(Q(registry,8)-Q(registry,0))>>6;
     U32 capacity=0x100000;while(capacity<count&&capacity<0x400000)capacity*=2;
     if(capacity<count){ProxyLog("F5 rejected: actor registry exceeds bounded capacity.");return FALSE;}
     Cache *cache=VirtualAlloc(NULL,(SIZE_T)capacity*sizeof(Cache),MEM_RESERVE|MEM_COMMIT,PAGE_READWRITE);
@@ -168,13 +269,13 @@ static BOOL Prepare(BYTE *base){
     FlushInstructionCache(GetCurrentProcess(),thunks,65536);
     memcpy(g_hooks,temporary,sizeof(g_hooks));g_image=base;g_thunks=thunks;
     for(unsigned i=0;i<HOOK_COUNT;i++){
-        g_originals[i]=g_specs[i].entry?g_hooks[i].call+5:base+g_specs[i].targetRva;
-        if(g_specs[i].entry)g_particleChildren=base+g_specs[i].targetRva;
+        g_patchSites[i]=g_hooks[i].call;
+        g_originals[i]=g_specs[i].entry?g_hooks[i].call+5:g_hooks[i].nativeTarget;
+        if(g_specs[i].entry)g_particleChildren=g_hooks[i].nativeTarget;
     }
-    g_config.base=(U64)base;g_config.registryAddress=(U64)base+0x1379EF0;g_config.localRefAddress=(U64)base+0x1302F28;
+    g_config.base=(U64)base;g_config.registryAddress=bindings[0];g_config.localRefAddress=bindings[1];
     g_config.cacheAddress=(U64)cache;g_config.capacity=capacity;
-    const DWORD vtables[]={0xEE4520,0xEE5FE8,0xEE6830,0xEE6BA8,0xFE4770,0xFD10F8,0xF10600,0xF4A868,0xF23958,0xF37BB8,0xF3E8D0,0xF26E20,0xF252F8,0xEFDFA0,0xF42900};
-    U64 *dest=&g_config.mesh;for(unsigned i=0;i<15;i++)dest[i]=(U64)base+vtables[i];
+    U64 *dest=&g_config.mesh;for(unsigned i=0;i<RTTI_CLASS_COUNT;i++)dest[i]=vtables[i];
     g_ready=TRUE;ProxyLog("prepared %u unique hooks; cache=%u records (%u MiB). No code sites changed yet.",HOOK_COUNT,capacity,(unsigned)(capacity*sizeof(Cache)/(1024*1024)));
     return TRUE;
 }
@@ -303,4 +404,13 @@ void *VisibilityTestCall(unsigned i){return i<HOOK_COUNT?g_hooks[i].call:NULL;}
 void *VisibilityTestWrapper(unsigned i){return i<HOOK_COUNT?g_specs[i].wrapper:NULL;}
 BOOL VisibilityTestInstalled(void){return g_installed;}
 void VisibilityTestFailAfterWrite(LONG index){g_testFailAfterWrite=index;}
+/* Optional file audit: discovery only, no cache/thunk allocation or patching. */
+BOOL VisibilityTestInspect(HMODULE module,void *sites[HOOK_COUNT],void *targets[HOOK_COUNT],U64 bindings[2],U64 vtables[RTTI_CLASS_COUNT]){
+    BYTE *base=(BYTE*)module;IMAGE_NT_HEADERS64 *nt;Hook hooks[HOOK_COUNT];
+    __try {
+        if(!ImageHeaders(base,&nt)||!Discover(base,nt,hooks,bindings,vtables))return FALSE;
+        for(unsigned i=0;i<HOOK_COUNT;i++){sites[i]=hooks[i].call;targets[i]=hooks[i].nativeTarget;}
+        return TRUE;
+    } __except(EXCEPTION_EXECUTE_HANDLER){return FALSE;}
+}
 #endif

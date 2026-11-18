@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 # CMP0091 selects the CRT through a target property, rather than editing flags.
-project(SSOVisibility VERSION 1.2.1 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
+project(SSOVisibility VERSION 1.2.2 DESCRIPTION "Native Star Stable visibility controller" LANGUAGES C)
 
 if(NOT WIN32 OR NOT MSVC OR NOT CMAKE_C_COMPILER_ID STREQUAL "MSVC")
     message(FATAL_ERROR "Use Windows with the Microsoft C compiler and x64 MASM (Visual Studio Desktop development with C++).")
@@ -33,7 +33,7 @@ if(NOT SSO_HOST MATCHES "^(PROXY|RESHADE|ASI|PLUGIN)$")
 endif()
 set(sso_sources src/host.c src/presets.c src/visibility/visibility_runtime.c
     src/visibility/classifier.inc src/asm/visibility_hooks.asm generated/hook_specs.inc
-    generated/particle_policy.inc include/sso_proxy/proxy_internal.h include/sso_proxy/host.h
+    generated/particle_policy.inc generated/layout_specs.inc include/sso_proxy/proxy_internal.h include/sso_proxy/host.h
     include/sso_proxy/presets.h)
 if(SSO_HOST STREQUAL "PROXY")
     list(APPEND sso_sources src/proxy_main.c generated/gl_forwarders.asm generated/opengl32.def generated/gl_exports.inc)
@@ -62,6 +62,7 @@ target_link_options(sso_visibility PRIVATE "/MAP:$<TARGET_FILE_DIR:sso_visibilit
 set_property(TARGET sso_visibility APPEND PROPERTY LINK_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/write_metadata.ps1"
     "${CMAKE_CURRENT_SOURCE_DIR}/data/visibility-sites.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/data/client-layout.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/data/runtime-layout.json")
 add_custom_command(TARGET sso_visibility POST_BUILD
     COMMAND "${SSO_POWERSHELL}" -NoLogo -NoProfile -ExecutionPolicy Bypass
@@ -116,5 +117,7 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-sou
 set(CPACK_SOURCE_IGNORE_FILES "/out/;/\\.git/;/\\.vs/;/__pycache__/;\\.pyc$;CMakeUserPresets\\.json$;\\.log$")
 include(CPack)
 
-message(STATUS "Host ${SSO_HOST}: ${PROJECT_VERSION}, x64 MSVC + MASM, static CRT; game layout 645.348067")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/data/client-layout.json" sso_layout_json)
+string(JSON sso_layout_reference GET "${sso_layout_json}" reference_client)
+message(STATUS "Host ${SSO_HOST}: ${PROJECT_VERSION}, x64 MSVC + MASM, static CRT; layout reference ${sso_layout_reference}, no PE version gate")
 message(STATUS "Native tests: ${BUILD_TESTING}; optional Python tests: ${Python3_Interpreter_FOUND}")

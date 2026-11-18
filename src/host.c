@@ -1,6 +1,7 @@
 /* Common controller for the proxy, ReShade and explicit-entry ASI/DLL loaders. */
 #include "sso_proxy/host.h"
 #include "sso_proxy/presets.h"
+#include "layout_specs.inc"
 #include <process.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -77,7 +78,7 @@ static BOOL CALLBACK InitializeHost(PINIT_ONCE once,PVOID parameter,PVOID *conte
     g_ownsController=TRUE;HMODULE pinned;
     if(!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_PIN,(LPCWSTR)g_hostModule,&pinned)){CloseHandle(g_controllerMutex);g_controllerMutex=NULL;g_ownsController=FALSE;return FALSE;}
     VisibilityInitialize();SsoPresetsLoad(g_iniPath,&g_presets);ApplyPreset(g_presets.defaultPreset,FALSE);
-    ProxyLog("SSO Visibility " SSO_VERSION_STRING "; baseline 645.348067; INI=%ls; pinned until process exit.",g_iniPath);
+    ProxyLog("SSO Visibility " SSO_VERSION_STRING "; layout reference " SSO_LAYOUT_REFERENCE "; PE version gate disabled; INI=%ls; pinned until process exit.",g_iniPath);
     return TRUE;
 }
 BOOL SsoHostStart(HMODULE module){

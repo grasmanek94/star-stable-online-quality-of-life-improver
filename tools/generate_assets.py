@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def assets():
     gl = json.loads((ROOT / "data/opengl-exports.json").read_text(encoding="utf-8"))["exports"]
     sites = json.loads((ROOT / "data/visibility-sites.json").read_text(encoding="utf-8"))
+    layout = json.loads((ROOT / "data/client-layout.json").read_text(encoding="utf-8"))
+    groups = {name: i for i, name in enumerate(layout["target_groups"])}
     assert len(gl) == 368 and len(sites) == 21
     assert len({x["name"] for x in gl}) == len({x["ordinal"] for x in gl}) == len(gl)
     output = {}
@@ -43,7 +45,7 @@ def assets():
                 f"PUBLIC GL_Lazy_{i}", f"GL_Lazy_{i} PROC", f"mov r11d,0{i:X}h",
                 "jmp ProxyResolve", f"GL_Lazy_{i} ENDP"]
     output["gl_forwarders.asm"] = "\n".join(asm + ["END"]) + "\n"
-    hooks = ["/* Generated AOB plan, baseline 645.348067. Do not edit. */", f"#define HOOK_COUNT {len(sites)}"]
+    hooks = ["/* Generated relocation-masked AOB plan. Do not edit. */", f"#define HOOK_COUNT {len(sites)}"]
     for i, site in enumerate(sites.values()):
         pattern = site["pattern"].split()
         window = bytes.fromhex(site["window"])
@@ -61,8 +63,8 @@ def assets():
                   f"extern void HideHook_{i}(void);"]
     hooks += ["static const HookSpec g_specs[HOOK_COUNT]={"]
     for i, (name, site) in enumerate(sites.items()):
-        hooks += ['{"%s",pat_%d,mask_%d,sizeof(pat_%d),%d,%s,(void*)HideHook_%d,%d},' %
-                  (name, i, i, i, site["patch_offset"], site["target_rva"], i, int(site.get("kind")=="particle_entry"))]
+        hooks += ['{"%s",pat_%d,mask_%d,sizeof(pat_%d),%d,%s,(void*)HideHook_%d,%d,%d},' %
+                  (name, i, i, i, site["patch_offset"], site["target_rva"], i, int(site.get("kind")=="particle_entry"), groups[site["target_group"]])]
     output["hook_specs.inc"] = "\n".join(hooks + ["};"]) + "\n"
     wrappers = (ROOT / "src/asm/visibility_hooks.asm").read_text(encoding="utf-8")
     import re
@@ -76,6 +78,38 @@ def assets():
     fixture+='typedef struct {DWORD rva,offset;const BYTE *bytes;SIZE_T length;} Fixture;\nstatic const Fixture fixture_windows[]={\n'
     fixture+="\n".join("{%s,%d,fixture_window_%d,sizeof(fixture_window_%d)},"%(site["rva"],site["patch_offset"],i,i)for i,site in enumerate(sites.values()))+"\n};\n"
     output["fixture_windows.inc"]=fixture
+    binding_header = ['/* Generated semantic bindings; reference RVAs are fixture/documentation data only. */',
+        '#define SSO_LAYOUT_REFERENCE '+json.dumps(layout['reference_client']),
+        'typedef struct {SIZE_T offset;BYTE opcode;int targetGroup;} TargetRelation;',
+        'typedef struct {const char *name;const BYTE *pattern,*mask,*window;SIZE_T length;DWORD referenceRva;const TargetRelation *relations;SIZE_T relationCount;} TargetGroup;',
+        'typedef struct {const char *name;unsigned sourceGroup;int sourceCallOffset;const BYTE *pattern,*mask,*window;SIZE_T length,displacementOffset,instructionEnd,span;DWORD referenceSourceRva,referenceTargetRva;} BindingSpec;']
+    def emit_descriptor(prefix, item):
+        raw=bytes.fromhex(item['window']);tokens=item['pattern'].split()
+        assert len(tokens)==len(raw) and all(t=='??' or int(t,16)==b for t,b in zip(tokens,raw))
+        binding_header.extend([
+            f'static const BYTE {prefix}_window[]={{'+','.join(f'0x{x:02X}' for x in raw)+'};',
+            f'static const BYTE {prefix}_pattern[]={{'+','.join('0' if t=='??' else '0x'+t for t in tokens)+'};',
+            f'static const BYTE {prefix}_mask[]={{'+','.join('0' if t=='??' else '255' for t in tokens)+'};'])
+    for name,index in groups.items():
+        item=layout['target_groups'][name];emit_descriptor(f'target_{index}',item)
+        if item['relations']:
+            binding_header.append(f'static const TargetRelation target_{index}_relations[]={{'+','.join('{%d,0x%s,%d}'%(r['offset'],r['opcode'],-1 if r['target']=='registry_resolver' else groups[r['target']]) for r in item['relations'])+'};')
+    binding_header += [f'#define TARGET_GROUP_COUNT {len(groups)}','static const TargetGroup g_targetGroups[]={']
+    for name,index in groups.items():
+        item=layout['target_groups'][name];relations=f'target_{index}_relations' if item['relations'] else 'NULL'
+        binding_header.append('{%s,target_%d_pattern,target_%d_mask,target_%d_window,sizeof(target_%d_window),%s,%s,%d},'%(json.dumps(name),index,index,index,index,item['reference_rva'],relations,len(item['relations'])))
+    binding_header.append('};')
+    for index,item in enumerate(layout['bindings'].values()):emit_descriptor(f'binding_{index}',item)
+    binding_header.append('static const BindingSpec g_bindings[]={')
+    for index,(name,item) in enumerate(layout['bindings'].items()):
+        binding_header.append('{%s,%d,%d,binding_%d_pattern,binding_%d_mask,binding_%d_window,sizeof(binding_%d_window),%d,%d,%d,%s,%s},'%(json.dumps(name),groups[item['source_group']],item['source_call_offset'] if item['source_call_offset'] is not None else -1,index,index,index,index,item['displacement_offset'],item['instruction_end'],item['span'],item['reference_rva'],item['reference_target_rva']))
+    binding_header += ['};',f'#define RTTI_CLASS_COUNT {len(layout["vtables"])}',
+        'static const char *const g_rttiNames[]={'+','.join(json.dumps('.?AV'+item['class_name']+'@@') for item in layout['vtables'].values())+'};',
+        'static const DWORD g_referenceVtables[]={'+','.join(item['reference_rva'] for item in layout['vtables'].values())+'};']
+    for index,key in enumerate(layout['vtables']):binding_header.append(f'#define SSO_VT_{key.upper()} {index}')
+    emit_descriptor('registry_records',layout['registry_records'])
+    binding_header.append('#define REGISTRY_RECORDS_REFERENCE_RVA '+layout['registry_records']['reference_rva'])
+    output['layout_specs.inc']='\n'.join(binding_header)+'\n'
     return output
 
 

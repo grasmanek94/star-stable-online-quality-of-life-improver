@@ -1,6 +1,6 @@
 {
-  "version": "1.2.1",
-  "recorded_utc": "2026-11-15T22:38:48.666677+00:00",
+  "version": "1.2.2",
+  "recorded_utc": "2026-11-18T21:54:01.106358+00:00",
   "location": "linked repository working tree",
   "builds": [
     {
@@ -8,12 +8,12 @@
       "preset": "vs2026-x64",
       "configuration": "Release",
       "module": "opengl32.dll",
-      "dll_sha256": "4f0557feecb27b5e2059c152899968a5942ad2270a640d472563fbce9d3394f9",
+      "dll_sha256": "4915b4be10f775684b7c99783210f57e8ba9bbc284c2082d6dac0b1479212ad2",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x77560",
+      "config_rva": "0x786c0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -26,26 +26,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 12,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "38127e71f8f6cf3e1722826bbaf174d261118bafbb5a62d58c9338999344ea9c",
-      "junit_sha256": "cf4dea99f1a0c4c8199878a84345019d3a87d7da769cd00866094327f594a04c",
-      "log_sha256": "aa1964e67718c1f846e00f3c928e55b2766ac96bd7c644845ff8681fc626ca57"
+      "pe_metadata_sha256": "fca4e81b7dbd1c042f9b97fbf67ca3fff9911335d34f306e145e478554545d78",
+      "junit_sha256": "dd5904fba0f01f43365af6f26c16716760973b9dd4dc943a11080e7b5240af7c",
+      "log_sha256": "291a3e57997e2cb2bd5a6910242cf9dcfac4ddec02a5a7ea77c83bce1fe78a27"
     },
     {
       "loader": "PROXY",
       "preset": "vs2026-x64",
       "configuration": "Debug",
       "module": "opengl32.dll",
-      "dll_sha256": "997c033ac356ed6e8201eb46291450d383fcdd0345b57f9e50481f0bdedd8dd4",
+      "dll_sha256": "cc0b0d114dea1b9c07c5857d70c8bef0e9f24d1fd2f95e1957d3c2d431de2cac",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x136da0",
+      "config_rva": "0x13a4a0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -58,26 +58,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 12,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "27c2191433f6d2d3f471c8671e80834c21655cd883f4296f5f0ec7c18030df1b",
-      "junit_sha256": "7be28f3e2b8f402103a21f1e0792b5ebf5a6c0d408993d750af90a8a8276578c",
-      "log_sha256": "305c27b144f85964055f2958d494e5c169f8a0fcd1821367fe97ff12d761fc60"
+      "pe_metadata_sha256": "41a2a97ccfd6dd3c08c40f37a98553538e08f5a6f502507fe21ec9806b9b8dc5",
+      "junit_sha256": "a95ac14534882084460fe0c0c7b9c3ac133b1e08b48084bad5c415f66523cf5b",
+      "log_sha256": "eac9ef69da6fb74c6f3abe0331e92459b108a0ecff1a3858ececbbf7d8730d36"
     },
     {
       "loader": "PROXY",
       "preset": "vs2026-x64",
       "configuration": "RelWithDebInfo",
       "module": "opengl32.dll",
-      "dll_sha256": "c3123271eb5d68207b8d48c34214241563b32b734793d7592e8eb100165b86ab",
+      "dll_sha256": "11b4756dbaf7534b289b7eeb4c6028be8949bed36203f8a638ea6e17b661b037",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x77560",
+      "config_rva": "0x786c0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -90,26 +90,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 12,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "d1558070b065ab05b0f776f36c87d892858163e509c090c1079be3052237deee",
-      "junit_sha256": "6c67b918f7373aee8588b88f10e39e810a8660920894e29473e93f02ea3f1775",
-      "log_sha256": "dbdf53685b37268ead5dd006953b2ddafedc40ab8ffe094e2da1ce92ae5c2554"
+      "pe_metadata_sha256": "c21aac27ec0b689fce244a4ee5c4434101d3c2813ba49d490f1e352995a17e2f",
+      "junit_sha256": "a02e1048b18964f79a8f2337d9d39f8fca93c0da55566ee1c0de3d9c126f7d0c",
+      "log_sha256": "ccacd586c5a28af69af560e8b567e22bed36b8fb27592b5412f7ae8464a0ef25"
     },
     {
       "loader": "RESHADE",
       "preset": "vs2026-x64-reshade",
       "configuration": "Release",
       "module": "SSOVisibility.addon64",
-      "dll_sha256": "a9863e2d3c7de720f7dc0cdebc3842d150dae8e7e51415b586052f1b22e3ccb9",
+      "dll_sha256": "96e56b4f73ac3502018d79e821e6bac03ee43030295cc48eb2354e442f86d257",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x5fe40",
+      "config_rva": "0x62fa0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -122,26 +122,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "289a3ac2a386316f47015f6e3e590d7baad50fb8d6b72f61e38fd46a58652736",
-      "junit_sha256": "eabffdad2d0283ad4b3f15ccadd12dec1f080ff3e94d99db89336bb842371f55",
-      "log_sha256": "5266c7b31a433b4ba645b92d3921293c37bc5b84ed172cd96578b9ad5262e3c2"
+      "pe_metadata_sha256": "b6a5fb96fd3ebaf81d3590e09d17d9ba61d27a8ac6d0f85b3d7a1f49ab6a05c3",
+      "junit_sha256": "6fed9732ae361eda4a62235f921f1443b2d986c10d3aa6da635d34768831043b",
+      "log_sha256": "f33a8a81a504321cc135de9b2b839cc111c3d14c77df21bb117cfbb73727e4eb"
     },
     {
       "loader": "RESHADE",
       "preset": "vs2026-x64-reshade",
       "configuration": "Debug",
       "module": "SSOVisibility.addon64",
-      "dll_sha256": "2074de5a4b9668d3eeac3ec3d938480d1f73ca2d819bca03fc6782cac0f58920",
+      "dll_sha256": "da8692ba1566770c7cfcfd4b359a9b4decf01c07fa0a8ec0bdcfe04f3d63ff94",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x11fd80",
+      "config_rva": "0x1224a0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -154,26 +154,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "800fcd1483877aea9b8c9ffafe04c6888fbdaf37af7c784f2e5931e40ef43ba1",
-      "junit_sha256": "ceb4989bfa2dac7d969faa1a3d83f55f3ad857b288caa3c45adb1663cc4607a7",
-      "log_sha256": "b5e4bf94c7d5bda13123e7929a27d64c16af29298e35e06fd205bd9a84fbf586"
+      "pe_metadata_sha256": "fe79612b186a72fc5ed9b3804230ab7a74fe66b149957e8a68f2cf5f04d2162c",
+      "junit_sha256": "3f77e4dc72f3b41a40834b0d97a7494232d40d5404adf191d657c43a973c3671",
+      "log_sha256": "ef85e5dd2337035529b2fad63996c6a3e1151131e63adfe773e88b3b27681221"
     },
     {
       "loader": "ASI",
       "preset": "vs2026-x64-asi",
       "configuration": "Release",
       "module": "SSOVisibility.asi",
-      "dll_sha256": "9410178f4e1c2a90e4853b65cb2966c853684330c4e26b961c140f583f345e7b",
+      "dll_sha256": "936c0dbd23d03847ab934ee0b3fe6bd6d9bc700cb1074c643b8eaeacf8e24d60",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x5fe40",
+      "config_rva": "0x62fa0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -186,26 +186,26 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "0f0cf869e54f9a4073195c15efaf1426b3d2f87640a979f6e502467e945d5b82",
-      "junit_sha256": "cd07d69816c2a761ec9d62ea2d1d2b03cee295d9293f65d48da7641e52884572",
-      "log_sha256": "7bfbe75371375d0b1a013f04a4e9a1afa74463c9253d2b204f9e330ae81b3a01"
+      "pe_metadata_sha256": "751a1d851c1547eec76b5559c4857c07cfbd629cdab2a7b7e7957d011a0f9eda",
+      "junit_sha256": "3caab74127834e37fcf1b671d3317283ffb7203ae10a81e28b4e68ce23a32f56",
+      "log_sha256": "a33a8d8813c58a7d3825f3d5ce324e927c13237e46db367fcf58d5b1c35e298f"
     },
     {
       "loader": "PLUGIN",
       "preset": "vs2026-x64-plugin",
       "configuration": "Release",
       "module": "SSOVisibility.dll",
-      "dll_sha256": "cdf18947cad5a0299650375d6fd5e4796b2cdb7325cf47d14335e0eac1d13c29",
+      "dll_sha256": "fc5a46a554189125d7697375a1ebd9b01f3ac0071711d9fe03442523dfa8c04b",
       "imports": [
         "KERNEL32.dll",
         "USER32.dll"
       ],
-      "config_rva": "0x5fe40",
+      "config_rva": "0x62fa0",
       "config_size": 368,
       "hooks": 21,
       "categories": 14,
@@ -218,44 +218,46 @@
         "presets",
         "runtime"
       ],
-      "runtime_scenarios": 21,
+      "runtime_scenarios": 27,
       "classifier_cases": 113,
       "compiled_wrapper_cases": 168,
       "compiled_forwarder_cases": 0,
       "pe_metadata_images": 5,
-      "pe_metadata_sha256": "2234545e59956ce931702101c47027e9a85a8307b4bf0a7e4461a96b29be60c3",
-      "junit_sha256": "bf513a4b5ea69317afe0d60ddd4643022870c70b78d19184a9da462226a2ef2d",
-      "log_sha256": "db1f9abd1dcd47fa2ede4c4504fb0d8ae572a88ac7ed107bbeea6d2efa32848f"
+      "pe_metadata_sha256": "713f2d5bfc09f6cca5613f5126556485fdfc2b56ebd7437c571ce6233c49fd3e",
+      "junit_sha256": "b55362dee123cf06e64a6ee994ddaf8a2a319ddc85396ad4aa0855d09b26a6d3",
+      "log_sha256": "a0d0dc3db0f348ab8e5de8e25eb31c06ae3c902150842fa68923f11a8724569c"
     }
   ],
   "native_input_hashes": {
     "src/asm/visibility_hooks.asm": "72f61fcae9dcb648620eed5ae36e9a5c43011d4c8b623738b1fc6baf8382e2e1",
-    "src/host.c": "76243304b6d81e61ef0530654409b61881c2a0949b78dc89f57285a10168a5ad",
+    "src/host.c": "7362b43afc3974cc79c62a2db08356ba8c4e64ad8ee15aea2f415fd122880ac8",
     "src/hosts/plugin_host.cpp": "e4bdd9c4ca297c1301b7f79817547cbd09d524c17d10c8df206fa5ee03d67e42",
     "src/presets.c": "50263033d535bd16a001ba8a15b839e569a9eb9a350d0e2dd43ee91107820bc6",
     "src/proxy_main.c": "2954fae6f9ca21eee3f4d5691fd488daeedc043a80235a603b17862fcfccf856",
-    "src/visibility/classifier.inc": "685752636f4e5ba331c3101b6789011450a7568e89a9c3a9894fe397b9cd5162",
-    "src/visibility/visibility_runtime.c": "a1d53f423b7cac24d8bea2acf49cae408cd9fb82195d7db6422bc0f5320d364e",
+    "src/visibility/classifier.inc": "7d9c2c111ce646d09f980e8a0deb2167b69166f9ed0fc83656d6b12130c6ef53",
+    "src/visibility/visibility_runtime.c": "e167354bc944fd8f98ced190d6ae51cabb8865a16c97fcdc8b15f52ce15b7756",
     "include/sso_proxy/host.h": "9296192f33c6a95bc5bdcf7b25ab67918a0bcd617ec835361a340624e30dd836",
     "include/sso_proxy/presets.h": "3984b004b206d9593bd018ba44832560be10a818f57ce2729026a855aa4166db",
     "include/sso_proxy/proxy_internal.h": "8b78dc8029e90647eb8173b4a3438b3fc374a293f7259feb90fb0f36fc33acb2",
-    "generated/fixture_windows.inc": "65dd7b0b5f3efe4ebc4cb64edd31ed292b612e30a3efe41f1194a8cba394aed2",
+    "generated/fixture_windows.inc": "86de00b960b625731c38e07d92943449debf24000d80f2bff41f71327c9e2282",
     "generated/gl_exports.inc": "e57095a9841776aa1e70b9ed68225cb3e45c84f88a0841cbd46cda755b94f288",
     "generated/gl_forwarders.asm": "f7c706a3f4d0f62b4417517a091aa7d6f278ad5aa821a2344ad990943e5f87c6",
-    "generated/hook_specs.inc": "00619cd776bbd680ef5f97961882a20810ce1ea64a497529c798012db4dc1727",
+    "generated/hook_specs.inc": "338d27707afc51ddd501aa598b47e5f82f2f6169889e23490035da58622e826f",
+    "generated/layout_specs.inc": "fc41dffa72ba83b89f68269239f3b73887577be364313ad1c91464836cbefed2",
     "generated/opengl32.def": "bfd9ed6c5dc0730f9122a8e93d133755d81ccdb3754a0ef55b101db231e8fcf1",
     "generated/particle_policy.inc": "517b3ea88f7de44cc27a3a1a44078d0b2b2eed2ec17bbfc07c13ee3423e043b8",
+    "data/client-layout.json": "e492e8eba82d3e04dc4f1ee41f897b641f4f535596b054982843bfe7210f4cbc",
     "data/opengl-exports.json": "9024f981ba7d01e1543fc41ff9f46aecf0ab66867ff77391d0aaa81a54731395",
     "data/particle-policy.json": "6143b1242e5d227973aaa7d07154f6a0d659b49ca2882d7192b987ec18d80738",
     "data/runtime-layout.json": "a8dccebbe9149eb55859051e0cd30f23b9c4132171e15d0cda287818f7f46475",
-    "data/visibility-sites.json": "b837789bd147c13aa50f3172a29c18ddfedf6ba07232fbf3efc602e7fd4ced68",
-    "config/SSOVisibility.ini": "50e9556d87d92d094a5e706a4d3eb33cc63c2fa1f280537d8f8d541dee314911",
+    "data/visibility-sites.json": "229c050763011dba78694d43edff971a142478472f87193821af307d046f8ec2",
+    "config/SSOVisibility.ini": "03abbe905a978407dd1bff1cd68f06a52f94a7acaf00762abe8fef7f3da1362e",
     "cmake/CompilerOptions.cmake": "e4aa4bd805ae40d4a28e926c8b435c068abf4fad48f38ad44159f85d29db3de6",
     "cmake/CopyDefaultConfig.cmake": "098823095cbf56a7f26dbce0214efe6d140fcb8cf5e0d55be62967155ccf38ac",
     "cmake/GenerateVersionResource.cmake": "e1f5f43e14eb5eb281742242b34997afb539fd6233f0dbb9a2545e5137f6e68b",
     "cmake/version.rc.in": "192abd789a277e065bb63ce3bf7e34207b4d4a19380f54b9d1591e1cb1922595",
     "cmake/VersionResources.cmake": "ce654dd778513a34a3716ec33453e0a3ff2db3aa8d503592e4a4005c98754257",
-    "CMakeLists.txt": "9f84823b6d9aee3620942c511d71914ad252698e1f9920661a02c57f1f624fd9",
+    "CMakeLists.txt": "83a1e72fc5ab743622e9a075aa34280b2f22da8a17497ced943d4ef701bc0922",
     "CMakePresets.json": "2ae2acb60952ed40c916863ae62b761a66394a8d5059e962746a31fb5cf2a033"
   },
   "scope": "Fresh local helper-process CTest and linked assembly results; no live 1.2 game/loader/FPS validation.",

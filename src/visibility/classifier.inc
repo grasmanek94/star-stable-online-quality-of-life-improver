@@ -1,6 +1,7 @@
 /* Shared native visibility classifier. Originally isolated with CE's x64 C compiler. No game calls, allocation,
    object writes or external imports. CFG_ADDRESS is supplied by the loader.
-   All offsets below are guarded to the analyzed 645.348067 executable. */
+   Offsets were rechecked for647.349716. Runtime code/RTTI/ownership validation
+   replaces the old645 PE identity gate; field-layout changes still need review. */
 typedef unsigned char U8;
 typedef unsigned int U32;
 typedef unsigned long long U64;

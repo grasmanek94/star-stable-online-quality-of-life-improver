@@ -1,12 +1,12 @@
-# Build validation — version 1.2.1, 2026-11-15
+# Build validation — version 1.2.2, 2026-11-18
 
-**PE metadata update:** rebuilt the same seven configurations with generated Windows VERSIONINFO resources; all42 CTest suite executions passed. Verified the requested identity, URL, author, copyright range, original filename, numeric/string version and Debug flags on all35 PE images. The unchanged incremental proxy build preserved its resource timestamp and DLL hash. Current build-validation.json includes each configuration's PE report count/hash; see PE_METADATA.md for generation details and the dated implementation journal.
+**Client647 compatibility update:** the seven-configuration matrix covers the new discovery code, relocation-masked AOBs and removed version gate. All42 CTest suite executions pass, with27 native runtime scenarios per configuration and the existing113 classifier/168 linked-wrapper cases. Generated VERSIONINFO identity is checked on all35 PE images. A separate file audit runs production discovery against647.349716 without executing or patching game code; all21 hooks,2 globals and15 RTTI identities resolve. See [the repair journal](updates/2026-11-18-client-647.md) and its sanitized JSON evidence. Live visual/restoration/FPS validation of the new module remains pending.
 
 **Latest results are fresh builds in the linked repository checkout**, retaining its historical1.1.0 directory name. All seven configurations below passed again here (42 suites). tools/build.ps1 preserves per-configuration validation/ctest.xml and ctest.log; tools/record_validation.py verifies these and the current module/classifier/assembly hashes before generating build-validation.json. Earlier workspace1.2 results are retained separately as build-validation-workspace-1.2-history.json. The earlier source-portability test described below remains separate historical evidence.
 
-**GitHub Actions is disabled by request.** Its configuration is archived at .github/workflows/windows.yml.disabled. The local matrix is complete; no remote CI result is claimed. Optional tools/package_release.py verifies/collects the CPack packages under out/releases/1.2.1. See SESSION_HANDOFF.md for the current repository and commands.
+**GitHub Actions is disabled by request.** Its configuration is archived at .github/workflows/windows.yml.disabled. The local matrix is complete; no remote CI result is claimed. Optional tools/package_release.py verifies/collects the CPack packages under out/releases/1.2.2. See SESSION_HANDOFF.md for the current repository and commands.
 
-Validated on Windows x64 with Visual Studio 2026, MSVC19.51.36252.0, SDK10.0.26100.0 and CMake4.5.0-rc1. The client guard remains645.348067. Exact per-build SHA256, module filenames, private config RVAs, imports and counts are recorded in [build-validation.json](build-validation.json). Rebuilt binaries may have different timestamps/hashes; use their own metadata.
+Validated on Windows x64 with Visual Studio 2026, MSVC19.51.36252.0, SDK10.0.26100.0 and CMake4.5.0-rc1. There is no timestamp/version/image-size allowlist; semantic, structure, ownership and exact-restoration checks remain. Exact per-build SHA256, module filenames, private config RVAs, imports and counts are recorded in [build-validation.json](build-validation.json). Rebuilt binaries may have different timestamps/hashes; use their own metadata.
 
 | Adapter | Configurations checked | CTest result per configuration |
 |---|---|---|
@@ -17,7 +17,7 @@ Validated on Windows x64 with Visual Studio 2026, MSVC19.51.36252.0, SDK10.0.261
 
 Each checked configuration included:
 
-- **Runtime:** 21 native synthetic install/restore/recovery scenarios covering all21 hooks, thread resumption, partial writes and exception fallback. New linked particle-entry tests exercise native continuation, child-dispatch once, unreadable-object fallback and E9 recovery.
+- **Runtime:** 27 native synthetic install/restore/recovery scenarios covering all21 hooks, thread resumption, partial writes and exception fallback. Linked particle-entry tests exercise native continuation, child-dispatch once, unreadable-object fallback and E9 recovery. New cases accept changed PE identity and relocated globals/vtables/native grass destination, and reject malformed helper/registry semantics, a global into code, duplicate AOBs and duplicate primary RTTI identities before any patch.
 - **Presets:** default8 exactly horses/riders/pets,9 exactly horses/riders, immutable all14 preset0, gradual defaults and 4→5 guard transition, sample INI agreement, invalid/missing values and overrides.
 - **Classifier:** 113 cases in host-owned fixtures, retaining earlier ownership/category cases and adding particle allowlist, broad/guarded modes, ancestry and protection cases.
 - **Generated assets:** committed outputs match canonical offline inputs.
