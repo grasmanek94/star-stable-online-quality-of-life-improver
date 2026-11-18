@@ -23,6 +23,11 @@ args = parser.parse_args()
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def source_sha(path):
+    # Git archives honor committed LF even if a Windows checkout contains CRLF.
+    # All native input folders below are maintained text, not binary artifacts.
+    return hashlib.sha256(path.read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+
 def imports(path):
     data = path.read_bytes()
     nt = struct.unpack_from('<I', data, 60)[0]
@@ -96,11 +101,12 @@ inputs = {}
 for name in ('src', 'include', 'generated', 'data', 'config', 'cmake'):
     for path in sorted((ROOT/name).rglob('*')):
         if path.is_file():
-            inputs[path.relative_to(ROOT).as_posix()] = sha(path)
+            inputs[path.relative_to(ROOT).as_posix()] = source_sha(path)
 for name in ('CMakeLists.txt', 'CMakePresets.json'):
-    inputs[name] = sha(ROOT/name)
+    inputs[name] = source_sha(ROOT/name)
 report = dict(version=VERSION, recorded_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     location='linked repository working tree', builds=builds, native_input_hashes=inputs,
+    native_input_hash_format='SHA256 after CRLF-to-LF normalization; PE/report hashes use raw bytes',
     scope='Fresh local helper-process CTest and linked assembly results; no live 1.2 game/loader/FPS validation.',
     not_run=['separate VS2022 installation', 'remote GitHub Actions (disabled by request)',
              'live 1.2 gameplay, GPU lifetime, ReShade/ASI and FPS checks'])

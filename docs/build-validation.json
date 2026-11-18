@@ -1,6 +1,6 @@
 {
   "version": "1.2.2",
-  "recorded_utc": "2026-11-18T21:54:01.106358+00:00",
+  "recorded_utc": "2026-11-18T21:56:20.825734+00:00",
   "location": "linked repository working tree",
   "builds": [
     {
@@ -229,16 +229,16 @@
     }
   ],
   "native_input_hashes": {
-    "src/asm/visibility_hooks.asm": "72f61fcae9dcb648620eed5ae36e9a5c43011d4c8b623738b1fc6baf8382e2e1",
-    "src/host.c": "7362b43afc3974cc79c62a2db08356ba8c4e64ad8ee15aea2f415fd122880ac8",
+    "src/asm/visibility_hooks.asm": "dc0e6b5f4d8be243a904556e09b522a556ad2ff31e81b75df659fb05aa0b5b26",
+    "src/host.c": "e3b0373a46ab95556afdbc2b107ddb4335c19dd8a9cf4eebe517edcb266dfc38",
     "src/hosts/plugin_host.cpp": "e4bdd9c4ca297c1301b7f79817547cbd09d524c17d10c8df206fa5ee03d67e42",
     "src/presets.c": "50263033d535bd16a001ba8a15b839e569a9eb9a350d0e2dd43ee91107820bc6",
-    "src/proxy_main.c": "2954fae6f9ca21eee3f4d5691fd488daeedc043a80235a603b17862fcfccf856",
+    "src/proxy_main.c": "d0a5796f1b87613154be21f775e4a7260d7be8f5d71b09df6249b737ef923524",
     "src/visibility/classifier.inc": "7d9c2c111ce646d09f980e8a0deb2167b69166f9ed0fc83656d6b12130c6ef53",
-    "src/visibility/visibility_runtime.c": "e167354bc944fd8f98ced190d6ae51cabb8865a16c97fcdc8b15f52ce15b7756",
+    "src/visibility/visibility_runtime.c": "e0ce3f065b0d351a3ebe1a23355a8ea7889194b7f599a22ae79d99c658e3ac3a",
     "include/sso_proxy/host.h": "9296192f33c6a95bc5bdcf7b25ab67918a0bcd617ec835361a340624e30dd836",
     "include/sso_proxy/presets.h": "3984b004b206d9593bd018ba44832560be10a818f57ce2729026a855aa4166db",
-    "include/sso_proxy/proxy_internal.h": "8b78dc8029e90647eb8173b4a3438b3fc374a293f7259feb90fb0f36fc33acb2",
+    "include/sso_proxy/proxy_internal.h": "87b2bc2dd408622acfd9c7d0dd883f71c2d25b6053f6b5698e787b680d07cf8d",
     "generated/fixture_windows.inc": "86de00b960b625731c38e07d92943449debf24000d80f2bff41f71327c9e2282",
     "generated/gl_exports.inc": "e57095a9841776aa1e70b9ed68225cb3e45c84f88a0841cbd46cda755b94f288",
     "generated/gl_forwarders.asm": "f7c706a3f4d0f62b4417517a091aa7d6f278ad5aa821a2344ad990943e5f87c6",
@@ -246,20 +246,21 @@
     "generated/layout_specs.inc": "fc41dffa72ba83b89f68269239f3b73887577be364313ad1c91464836cbefed2",
     "generated/opengl32.def": "bfd9ed6c5dc0730f9122a8e93d133755d81ccdb3754a0ef55b101db231e8fcf1",
     "generated/particle_policy.inc": "517b3ea88f7de44cc27a3a1a44078d0b2b2eed2ec17bbfc07c13ee3423e043b8",
-    "data/client-layout.json": "e492e8eba82d3e04dc4f1ee41f897b641f4f535596b054982843bfe7210f4cbc",
-    "data/opengl-exports.json": "9024f981ba7d01e1543fc41ff9f46aecf0ab66867ff77391d0aaa81a54731395",
-    "data/particle-policy.json": "6143b1242e5d227973aaa7d07154f6a0d659b49ca2882d7192b987ec18d80738",
-    "data/runtime-layout.json": "a8dccebbe9149eb55859051e0cd30f23b9c4132171e15d0cda287818f7f46475",
-    "data/visibility-sites.json": "229c050763011dba78694d43edff971a142478472f87193821af307d046f8ec2",
+    "data/client-layout.json": "480f07abe1f8ccf195c3dcc992e28c39ea6f349aad731125deaac90f29730424",
+    "data/opengl-exports.json": "481e28751c672523169989f8d0d630d7494227a855191f865421f73478539a75",
+    "data/particle-policy.json": "f059c9da0d84e669422433d0507237dfe2442a7170cfe45cb52cc68ee621b580",
+    "data/runtime-layout.json": "41d3211dd6dae4a31534d334c1cf31961e03c52b4f4d534d6abf049868217eb7",
+    "data/visibility-sites.json": "84cef1ef954584fd4f3b42aa7355b2fa462e0778d5beeadfecbbaa3e106a3b6e",
     "config/SSOVisibility.ini": "03abbe905a978407dd1bff1cd68f06a52f94a7acaf00762abe8fef7f3da1362e",
-    "cmake/CompilerOptions.cmake": "e4aa4bd805ae40d4a28e926c8b435c068abf4fad48f38ad44159f85d29db3de6",
+    "cmake/CompilerOptions.cmake": "16e5a7d9db12bfd44bea7783a4a2417ce84c4d493984f1eab86fae9c7ec45f5b",
     "cmake/CopyDefaultConfig.cmake": "098823095cbf56a7f26dbce0214efe6d140fcb8cf5e0d55be62967155ccf38ac",
     "cmake/GenerateVersionResource.cmake": "e1f5f43e14eb5eb281742242b34997afb539fd6233f0dbb9a2545e5137f6e68b",
     "cmake/version.rc.in": "192abd789a277e065bb63ce3bf7e34207b4d4a19380f54b9d1591e1cb1922595",
     "cmake/VersionResources.cmake": "ce654dd778513a34a3716ec33453e0a3ff2db3aa8d503592e4a4005c98754257",
     "CMakeLists.txt": "83a1e72fc5ab743622e9a075aa34280b2f22da8a17497ced943d4ef701bc0922",
-    "CMakePresets.json": "2ae2acb60952ed40c916863ae62b761a66394a8d5059e962746a31fb5cf2a033"
+    "CMakePresets.json": "d411e5c009293d10acb7b37b0aef089b75a844940feccd7302e855bae095f3b1"
   },
+  "native_input_hash_format": "SHA256 after CRLF-to-LF normalization; PE/report hashes use raw bytes",
   "scope": "Fresh local helper-process CTest and linked assembly results; no live 1.2 game/loader/FPS validation.",
   "not_run": [
     "separate VS2022 installation",

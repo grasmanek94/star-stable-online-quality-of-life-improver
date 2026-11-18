@@ -37,3 +37,5 @@ The VS2022 presets and all-adapter/configuration GitHub matrix are provided but 
 The earlier1.1 proxy was active during the foreground performance capture with all11 flags/18 hooks. That result is separate from these new1.2 filters/adapters. See JOURNAL.md for the0.4307ms sampled particle budget, tail-called-child refinement, exact evidence locations and unresolved performance scope. Tests do not prove crash-free gameplay or arbitrary game-update compatibility.
 
 The earlier source-migration validation record is retained as [build-validation-v1.1-history.json](build-validation-v1.1-history.json). Its DLL RVAs/hashes describe historical builds only.
+
+Native source-input hashes normalize CRLF to LF, matching Git source archives and Windows checkouts consistently. PE binaries and test/report files retain raw-byte SHA256 verification; no executable bytes are normalized. The final source ZIP's normalized input hashes are compared with the tested build inputs, and all four runtime archives retain the previous release's8-file layout.
